@@ -1,9 +1,6 @@
 # VRCSDK+
 VRCSDK+ provides alternative custom inspectors to the native VRCSDK expression menu and parameters for better functionality and quality of life features.
 
-## Download
-https://awa-vr.github.io/vrc-tools-vpm/
-
 ### VRCSDK+ does not modify the VRCSDK in any way.
 VRCSDK+ does not require a VRC+ subscription.  
 You can revert to original editors using the context menu of the respective object.  
