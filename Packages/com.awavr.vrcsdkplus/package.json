@@ -6,12 +6,15 @@
   },
   "name": "com.awavr.vrcsdkplus",
   "displayName": "AwA - VRCSDK+",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "An alternative to the VRCSDK expression Menu & Parameters Editors that provides better functionality and quality of life features.",
   "gitDependencies": {},
   "vpmDependencies": {
     "com.vrchat.avatars": "^3.0.0"
   },
+  "legacyPackages": [
+    "com.dreadscripts.vrcsdkplus"
+  ],
   "legacyFolders": {},
   "legacyFiles": {},
   "type": "tool",
