@@ -22,7 +22,8 @@ namespace AwAVR.VRCSDKPlus
         private static bool initialized;
         private static GUIContent redWarnIcon;
         private static GUIContent yellowWarnIcon;
-        private static GUIStyle centeredLabel => new GUIStyle(GUI.skin.label) {alignment = TextAnchor.MiddleCenter};
+        private static GUIStyle centeredLabel => new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
+
         private static readonly string[] allPlayables =
         {
             "Base",
@@ -34,7 +35,7 @@ namespace AwAVR.VRCSDKPlus
             "TPose",
             "IKPose"
         };
-        
+
         private static VRCAvatarDescriptor avatar;
         private static VRCAvatarDescriptor[] validAvatars;
         private static AnimatorControllerParameter[] validParameters;
@@ -62,6 +63,7 @@ namespace AwAVR.VRCSDKPlus
             RefreshValidParameters();
             RefreshValidPlayables();
         }
+
         private static void RefreshValidParameters()
         {
             if (!avatar)
@@ -69,8 +71,11 @@ namespace AwAVR.VRCSDKPlus
                 validParameters = Array.Empty<AnimatorControllerParameter>();
                 return;
             }
+
             List<AnimatorControllerParameter> validParams = new List<AnimatorControllerParameter>();
-            foreach (var r in avatar.baseAnimationLayers.Concat(avatar.specialAnimationLayers).Select(p => p.animatorController).Concat(avatar.GetComponentsInChildren<Animator>(true).Select(a => a.runtimeAnimatorController)).Distinct())
+            foreach (var r in avatar.baseAnimationLayers.Concat(avatar.specialAnimationLayers)
+                         .Select(p => p.animatorController).Concat(avatar.GetComponentsInChildren<Animator>(true)
+                             .Select(a => a.runtimeAnimatorController)).Distinct())
             {
                 if (!r) continue;
 
@@ -89,6 +94,7 @@ namespace AwAVR.VRCSDKPlus
                 validPlayableIndexes = Array.Empty<int>();
                 return;
             }
+
             List<(string, int)> myPlayables = new List<(string, int)>();
             for (int i = 0; i < allPlayables.Length; i++)
             {
@@ -108,9 +114,12 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
+        #region Expression Parameters
+
         internal sealed class VRCParamsPlus : Editor
         {
             private static int _MAX_MEMORY_COST;
+
             private static int MAX_MEMORY_COST
             {
                 get
@@ -118,8 +127,12 @@ namespace AwAVR.VRCSDKPlus
                     if (_MAX_MEMORY_COST == 0)
                     {
                         try
-                        { _MAX_MEMORY_COST = (int) typeof(VRCExpressionParameters).GetField("MAX_PARAMETER_COST", BindingFlags.Static | BindingFlags.Public).GetValue(null); }
-                        catch 
+                        {
+                            _MAX_MEMORY_COST = (int)typeof(VRCExpressionParameters)
+                                .GetField("MAX_PARAMETER_COST", BindingFlags.Static | BindingFlags.Public)
+                                .GetValue(null);
+                        }
+                        catch
                         {
                             Debug.LogError("Failed to dynamically get MAX_PARAMETER_COST. Falling back to 256");
                             _MAX_MEMORY_COST = 256;
@@ -130,7 +143,9 @@ namespace AwAVR.VRCSDKPlus
                 }
             }
 
-            private static readonly bool hasSyncingOption = typeof(VRCExpressionParameters.Parameter).GetField("networkSynced") != null;
+            private static readonly bool hasSyncingOption =
+                typeof(VRCExpressionParameters.Parameter).GetField("networkSynced") != null;
+
             private static bool editorActive = true;
             private static bool canCleanup;
             private int currentCost;
@@ -142,19 +157,23 @@ namespace AwAVR.VRCSDKPlus
             private ParameterStatus[] _parameterStatus;
 
             private static VRCExpressionParameters mergeParams;
-            
+
             public override void OnInspectorGUI()
             {
                 EditorGUI.BeginChangeCheck();
                 using (new GUILayout.HorizontalScope("helpbox"))
-                    DrawAdvancedAvatarFull(ref avatar, validAvatars, RefreshValidParameters, false, false, false, "Active Avatar");
+                    DrawAdvancedAvatarFull(ref avatar, validAvatars, RefreshValidParameters, false, false, false,
+                        "Active Avatar");
+
+                CalculateTotalCost();
+                ShowTotalMemory();
 
                 canCleanup = false;
                 serializedObject.Update();
                 HandleParameterEvents();
                 parametersOrderList.DoLayoutList();
                 serializedObject.ApplyModifiedProperties();
-                
+
                 if (canCleanup)
                 {
                     using (new GUILayout.HorizontalScope("helpbox"))
@@ -190,8 +209,8 @@ namespace AwAVR.VRCSDKPlus
 
                                     return false;
                                 }, i);
-                                
-                                
+
+
                                 return false;
                             });
                             serializedObject.ApplyModifiedProperties();
@@ -203,16 +222,17 @@ namespace AwAVR.VRCSDKPlus
 
                 EditorGUI.BeginChangeCheck();
                 using (new GUILayout.HorizontalScope("helpbox"))
-                    mergeParams = (VRCExpressionParameters)EditorGUILayout.ObjectField("Merge Parameters", null, typeof(VRCExpressionParameters), true);
+                    mergeParams = (VRCExpressionParameters)EditorGUILayout.ObjectField("Merge Parameters", null,
+                        typeof(VRCExpressionParameters), true);
                 if (EditorGUI.EndChangeCheck())
                 {
                     if (mergeParams)
                     {
                         if (mergeParams.parameters != null)
                         {
-                            VRCExpressionParameters myParams = (VRCExpressionParameters) target;
+                            VRCExpressionParameters myParams = (VRCExpressionParameters)target;
                             Undo.RecordObject(myParams, "Merge Parameters");
-                            myParams.parameters = myParams.parameters.Concat(mergeParams.parameters.Select(p => 
+                            myParams.parameters = myParams.parameters.Concat(mergeParams.parameters.Select(p =>
                                 new VRCExpressionParameters.Parameter()
                                 {
                                     defaultValue = p.defaultValue,
@@ -222,11 +242,18 @@ namespace AwAVR.VRCSDKPlus
                                 })).ToArray();
                             EditorUtility.SetDirty(myParams);
                         }
+
                         mergeParams = null;
                     }
                 }
 
-                CalculateTotalCost();
+                ShowTotalMemory();
+
+                if (EditorGUI.EndChangeCheck()) RefreshAllParameterStatus();
+            }
+
+            private void ShowTotalMemory()
+            {
                 try
                 {
                     using (new EditorGUILayout.HorizontalScope("helpbox"))
@@ -238,31 +265,46 @@ namespace AwAVR.VRCSDKPlus
                             {
                                 GUILayout.FlexibleSpace();
                                 GUILayout.Label("Total Memory");
+                                GUIContent help = new GUIContent
+                                {
+                                    image = EditorGUIUtility.IconContent("d_Help").image,
+                                    tooltip =
+                                        $"VRChat only allows {MAX_MEMORY_COST} synced parameter bits on an avatar. Only synced parameters in the VRC Expression Parameters are counted towards this." +
+                                        "\n\n" +
+                                        "Parameters in the animator can be any type that you want, they don't need to be the same as in the VRC Expression Parameters list. VRChat will automatically convert them, see more here: https://creators.vrchat.com/avatars/animator-parameters/#mismatched-parameter-type-conversion" +
+                                        "\n\n" +
+                                        "- bool = 1 bit\n" +
+                                        "- int = 8 bits\n" +
+                                        "- float = 8 bits"
+                                };
+                                GUILayout.Label(help);
                                 GUILayout.FlexibleSpace();
-
                             }
 
                             using (new GUILayout.HorizontalScope())
                             {
                                 GUILayout.FlexibleSpace();
-                                GUILayout.Label($"{currentCost} / {MAX_MEMORY_COST}");
+
+                                // progress bar
+                                Rect progressRect =
+                                    EditorGUILayout.GetControlRect(true, 20, GUILayout.ExpandWidth(true));
+                                float progress = Mathf.Clamp01((float)currentCost / MAX_MEMORY_COST);
+                                EditorGUI.ProgressBar(progressRect, progress, $"{currentCost} / {MAX_MEMORY_COST}");
+
+                                // warning icon
                                 if (currentCost > MAX_MEMORY_COST)
                                     GUILayout.Label(redWarnIcon, GUILayout.Width(20));
-                                GUILayout.FlexibleSpace();
 
+                                GUILayout.FlexibleSpace();
                             }
                         }
 
                         GUILayout.FlexibleSpace();
                     }
-                } catch{}
-                using (new GUILayout.HorizontalScope())
-                {
-                    GUILayout.FlexibleSpace();
-                    Link("Meow", "https://github.com/awa-vr/vrc-tools");
                 }
-
-                if (EditorGUI.EndChangeCheck()) RefreshAllParameterStatus();
+                catch
+                {
+                }
             }
 
             private void OnEnable()
@@ -277,10 +319,11 @@ namespace AwAVR.VRCSDKPlus
 
 
             private static float guitest = 10;
+
             private void DrawElement(Rect rect, int index, bool active, bool focused)
             {
                 if (!(index < parameterList.arraySize && index >= 0)) return;
-                
+
                 var screenRect = GUIUtility.GUIToScreenRect(rect);
                 if (screenRect.y > Screen.currentResolution.height || screenRect.y + screenRect.height < 0) return;
 
@@ -296,41 +339,47 @@ namespace AwAVR.VRCSDKPlus
                 bool parameterAddable = status.parameterAddable;
                 bool parameterIsDuplicate = status.parameterIsDuplicate;
                 bool hasWarning = status.hasWarning;
-                string warnMsg = parameterEmpty ? "Blank Parameter" : parameterIsDuplicate ? "Duplicate Parameter! May cause issues!" : "Parameter not found in any playable controller of Active Avatar";
+                string warnMsg = parameterEmpty ? "Blank Parameter" :
+                    parameterIsDuplicate ? "Duplicate Parameter! May cause issues!" :
+                    "Parameter not found in any playable controller of Active Avatar";
                 AnimatorControllerParameter matchedParameter = status.matchedParameter;
 
                 canCleanup |= hasWarning;
 
                 #region Rects
+
                 rect.y += 1;
                 rect.height = 18;
 
 
-                Rect UseNext( float width, bool fixedWidth = false, float position = -1, bool fixedPosition = false)
+                Rect UseNext(float width, bool fixedWidth = false, float position = -1, bool fixedPosition = false)
                 {
                     Rect currentRect = rect;
                     currentRect.width = fixedWidth ? width : width * rect.width / 100;
                     currentRect.height = rect.height;
-                    currentRect.x = position == -1 ? rect.x : fixedPosition ? position : rect.x + position * rect.width / 100;
+                    currentRect.x = position == -1 ? rect.x :
+                        fixedPosition ? position : rect.x + position * rect.width / 100;
                     currentRect.y = rect.y;
                     rect.x += currentRect.width;
                     return currentRect;
                 }
 
-                Rect UseEnd(ref Rect r, float width, bool fixedWidth = false, float positionOffset = -1, bool fixedPosition = false)
+                Rect UseEnd(ref Rect r, float width, bool fixedWidth = false, float positionOffset = -1,
+                    bool fixedPosition = false)
                 {
                     Rect returnRect = r;
                     returnRect.width = fixedWidth ? width : width * r.width / 100;
-                    float positionAdjust = positionOffset == -1 ? 0 : fixedPosition ? positionOffset : positionOffset * r.width / 100;
+                    float positionAdjust = positionOffset == -1 ? 0 :
+                        fixedPosition ? positionOffset : positionOffset * r.width / 100;
                     returnRect.x = r.x + r.width - returnRect.width - positionAdjust;
                     r.width -= returnRect.width + positionAdjust;
                     return returnRect;
                 }
-                
+
                 Rect contextRect = rect;
                 contextRect.x -= 20;
                 contextRect.width = 20;
-                
+
                 Rect removeRect = UseEnd(ref rect, 32, true, 4, true);
                 Rect syncedRect = hasSyncingOption ? UseEnd(ref rect, 18, true, 16f, true) : Rect.zero;
                 Rect savedRect = UseEnd(ref rect, 18, true, hasSyncingOption ? 34f : 16, true);
@@ -344,34 +393,42 @@ namespace AwAVR.VRCSDKPlus
 
                 //Rect removeRect = new Rect(rect.x + rect.width - 36, rect.y, 32, 18);
                 //Rect syncedRect = new Rect(rect.x + rect.width - 60, rect.y, 14, 18);
+
                 #endregion
 
-                using (new EditorGUI.DisabledScope(!string.IsNullOrEmpty(searchValue) && !Regex.IsMatch(name.stringValue, $@"(?i){searchValue}")))
+                using (new EditorGUI.DisabledScope(!string.IsNullOrEmpty(searchValue) &&
+                                                   !Regex.IsMatch(name.stringValue, $@"(?i){searchValue}")))
                 {
-                    //Hacky way to avoid proper UI Layout 
+                    //Hacky way to avoid proper UI Layout
                     string parameterFieldName = $"namefield{index}";
-                    
+
                     using (new EditorGUI.DisabledScope(validParameters.Length == 0))
                         if (GUI.Button(dropdownRect, GUIContent.none, EditorStyles.popup))
                         {
-
-                            var filteredParameters = validParameters.Where(conParam => !parameterList.IterateArray((_, prop) => prop.FindPropertyRelative("name").stringValue == conParam.name)).ToArray();
+                            var filteredParameters = validParameters.Where(conParam =>
+                                !parameterList.IterateArray((_, prop) =>
+                                    prop.FindPropertyRelative("name").stringValue == conParam.name)).ToArray();
                             if (filteredParameters.Any())
                             {
-                                VRCSDKPlusToolbox.CustomDropdown<AnimatorControllerParameter> textDropdown = new VRCSDKPlusToolbox.CustomDropdown<AnimatorControllerParameter>(null, filteredParameters, item =>
-                                {
-                                    using (new GUILayout.HorizontalScope())
-                                    {
-                                        GUILayout.Label(item.value.name);
-                                        GUILayout.Label(item.value.type.ToString(), VRCSDKPlusToolbox.Styles.Label.TypeLabel, GUILayout.ExpandWidth(false));
-                                    }
-                                }, (_, conParam) =>
-                                {
-                                    name.stringValue = conParam.name;
-                                    name.serializedObject.ApplyModifiedProperties();
-                                    RefreshAllParameterStatus();
-                                });
-                                textDropdown.EnableSearch((conParameter, search) => Regex.IsMatch(conParameter.name, $@"(?i){search}"));
+                                VRCSDKPlusToolbox.CustomDropdown<AnimatorControllerParameter> textDropdown =
+                                    new VRCSDKPlusToolbox.CustomDropdown<AnimatorControllerParameter>(null,
+                                        filteredParameters, item =>
+                                        {
+                                            using (new GUILayout.HorizontalScope())
+                                            {
+                                                GUILayout.Label(item.value.name);
+                                                GUILayout.Label(item.value.type.ToString(),
+                                                    VRCSDKPlusToolbox.Styles.Label.TypeLabel,
+                                                    GUILayout.ExpandWidth(false));
+                                            }
+                                        }, (_, conParam) =>
+                                        {
+                                            name.stringValue = conParam.name;
+                                            name.serializedObject.ApplyModifiedProperties();
+                                            RefreshAllParameterStatus();
+                                        });
+                                textDropdown.EnableSearch((conParameter, search) =>
+                                    Regex.IsMatch(conParameter.name, $@"(?i){search}"));
                                 textDropdown.Show(nameRect);
                             }
                         }
@@ -381,7 +438,8 @@ namespace AwAVR.VRCSDKPlus
                     EditorGUI.PropertyField(typeRect, valueType, GUIContent.none);
                     EditorGUI.PropertyField(savedRect, saved, GUIContent.none);
 
-                    GUI.Label(nameRect, matchedParameter != null ? $"({matchedParameter.type})" : "(?)", VRCSDKPlusToolbox.Styles.Label.RightPlaceHolder);
+                    GUI.Label(nameRect, matchedParameter != null ? $"({matchedParameter.type})" : "(?)",
+                        VRCSDKPlusToolbox.Styles.Label.RightPlaceHolder);
 
                     if (hasSyncingOption) EditorGUI.PropertyField(syncedRect, synced, GUIContent.none);
 
@@ -393,7 +451,7 @@ namespace AwAVR.VRCSDKPlus
                             int dummy = EditorGUI.IntPopup(addRect, -1, validPlayables, validPlayableIndexes);
                             if (change.changed)
                             {
-                                var playable = (VRCAvatarDescriptor.AnimLayerType) dummy;
+                                var playable = (VRCAvatarDescriptor.AnimLayerType)dummy;
                                 if (avatar.GetPlayableLayer(playable, out AnimatorController c))
                                 {
                                     if (c.parameters.All(p => p.name != name.stringValue))
@@ -418,11 +476,12 @@ namespace AwAVR.VRCSDKPlus
                                             name = name.stringValue,
                                             type = paramType,
                                             defaultFloat = defaultValue.floatValue,
-                                            defaultInt = (int) defaultValue.floatValue,
+                                            defaultInt = (int)defaultValue.floatValue,
                                             defaultBool = defaultValue.floatValue > 0
                                         });
 
-                                        GreenLog($"Added {paramType} {name.stringValue} to {playable} Playable Controller");
+                                        GreenLog(
+                                            $"Added {paramType} {name.stringValue} to {playable} Playable Controller");
                                     }
 
                                     RefreshValidParameters();
@@ -434,13 +493,14 @@ namespace AwAVR.VRCSDKPlus
                         GUI.Label(addRect, "Add");
                     }
 
-                    if (hasWarning) GUI.Label(warnRect, new GUIContent(yellowWarnIcon) {tooltip = warnMsg});
+                    if (hasWarning) GUI.Label(warnRect, new GUIContent(yellowWarnIcon) { tooltip = warnMsg });
 
                     switch (valueType.enumValueIndex)
                     {
                         case 2:
                             EditorGUI.BeginChangeCheck();
-                            int dummy = EditorGUI.Popup(defaultRect, defaultValue.floatValue == 0 ? 0 : 1, new[] {"False", "True"});
+                            int dummy = EditorGUI.Popup(defaultRect, defaultValue.floatValue == 0 ? 0 : 1,
+                                new[] { "False", "True" });
                             if (EditorGUI.EndChangeCheck())
                                 defaultValue.floatValue = dummy;
                             break;
@@ -450,7 +510,8 @@ namespace AwAVR.VRCSDKPlus
                     }
 
                     w_MakeRectLinkCursor(removeRect);
-                    if (GUI.Button(removeRect, VRCSDKPlusToolbox.GUIContent.Remove, VRCSDKPlusToolbox.Styles.Label.RemoveIcon))
+                    if (GUI.Button(removeRect, VRCSDKPlusToolbox.GUIContent.Remove,
+                            VRCSDKPlusToolbox.Styles.Label.RemoveIcon))
                         DeleteParameter(index);
                 }
 
@@ -465,11 +526,12 @@ namespace AwAVR.VRCSDKPlus
                     menu.ShowAsContext();
                 }
             }
-          
+
 
             private void DrawHeader(Rect rect)
             {
                 #region Rects
+
                 /*rect.y += 1;
                 rect.height = 18;
 
@@ -520,17 +582,20 @@ namespace AwAVR.VRCSDKPlus
                     Rect currentRect = rect;
                     currentRect.width = fixedWidth ? width : width * rect.width / 100;
                     currentRect.height = rect.height;
-                    currentRect.x = position == -1 ? rect.x : fixedPosition ? position : rect.x + position * rect.width / 100;
+                    currentRect.x = position == -1 ? rect.x :
+                        fixedPosition ? position : rect.x + position * rect.width / 100;
                     currentRect.y = rect.y;
                     rect.x += currentRect.width;
                     return currentRect;
                 }
 
-                Rect UseEnd(ref Rect r, float width, bool fixedWidth = false, float positionOffset = -1, bool fixedPosition = false)
+                Rect UseEnd(ref Rect r, float width, bool fixedWidth = false, float positionOffset = -1,
+                    bool fixedPosition = false)
                 {
                     Rect returnRect = r;
                     returnRect.width = fixedWidth ? width : width * r.width / 100;
-                    float positionAdjust = positionOffset == -1 ? 0 : fixedPosition ? positionOffset : positionOffset * r.width / 100;
+                    float positionAdjust = positionOffset == -1 ? 0 :
+                        fixedPosition ? positionOffset : positionOffset * r.width / 100;
                     returnRect.x = r.x + r.width - returnRect.width - positionAdjust;
                     r.width -= returnRect.width + positionAdjust;
                     return returnRect;
@@ -551,24 +616,35 @@ namespace AwAVR.VRCSDKPlus
                 searchIconRect.width = 18;
                 Rect searchRect = Rect.zero;
                 Rect searchClearRect = Rect.zero;
+
                 #endregion
-                
+
                 const string controlName = "VRCSDKParameterSearch";
-                if (VRCSDKPlusToolbox.HasReceivedCommand(VRCSDKPlusToolbox.EventCommands.Find)) GUI.FocusControl(controlName);
-                VRCSDKPlusToolbox.HandleTextFocusConfirmCommands(controlName, onCancel: () => searchValue = string.Empty);
+                if (VRCSDKPlusToolbox.HasReceivedCommand(VRCSDKPlusToolbox.EventCommands.Find))
+                    GUI.FocusControl(controlName);
+                VRCSDKPlusToolbox.HandleTextFocusConfirmCommands(controlName,
+                    onCancel: () => searchValue = string.Empty);
                 bool isFocused = GUI.GetNameOfFocusedControl() == controlName;
                 bool isSearching = isFocused || !string.IsNullOrEmpty(searchValue);
                 if (isSearching)
                 {
-                    searchRect = nameRect; searchRect.x += 14; searchRect.width -= 14;
-                    searchClearRect = searchRect; searchClearRect.x += searchRect.width - 18; searchClearRect.y -= 1; searchClearRect.width = 16;
+                    searchRect = nameRect;
+                    searchRect.x += 14;
+                    searchRect.width -= 14;
+                    searchClearRect = searchRect;
+                    searchClearRect.x += searchRect.width - 18;
+                    searchClearRect.y -= 1;
+                    searchClearRect.width = 16;
                 }
 
                 w_MakeRectLinkCursor(searchIconRect);
                 if (GUI.Button(searchIconRect, VRCSDKPlusToolbox.GUIContent.Search, centeredLabel))
                     EditorGUI.FocusTextInControl(controlName);
-                
-                GUI.Label(nameRect, new GUIContent("Name","Name of the Parameter. This must match the name of the parameter that it is controlling in the playable layers. Case sensitive."), centeredLabel);
+
+                GUI.Label(nameRect,
+                    new GUIContent("Name",
+                        "Name of the Parameter. This must match the name of the parameter that it is controlling in the playable layers. Case sensitive."),
+                    centeredLabel);
 
 
                 w_MakeRectLinkCursor(searchClearRect);
@@ -577,16 +653,21 @@ namespace AwAVR.VRCSDKPlus
                     searchValue = string.Empty;
                     if (isFocused) GUI.FocusControl(string.Empty);
                 }
+
                 GUI.SetNextControlName(controlName);
                 searchValue = GUI.TextField(searchRect, searchValue, "SearchTextField");
                 GUI.Button(searchClearRect, VRCSDKPlusToolbox.GUIContent.Clear, centeredLabel);
                 GUI.Label(typeRect, new GUIContent("Type", "Type of the Parameter."), centeredLabel);
-                GUI.Label(defaultRect, new GUIContent("Default", "The default/start value of this parameter."), centeredLabel);
-                GUI.Label(savedRect, new GUIContent("Saved","Value will stay when loading avatar or changing worlds"), centeredLabel);
-               
-                if (hasSyncingOption) 
-                    GUI.Label(syncedRect, new GUIContent("Synced", "Value will be sent over the network to remote users. This is needed if this value should be the same locally and remotely. Synced parameters count towards the total memory usage."), centeredLabel);
+                GUI.Label(defaultRect, new GUIContent("Default", "The default/start value of this parameter."),
+                    centeredLabel);
+                GUI.Label(savedRect, new GUIContent("Saved", "Value will stay when loading avatar or changing worlds"),
+                    centeredLabel);
 
+                if (hasSyncingOption)
+                    GUI.Label(syncedRect,
+                        new GUIContent("Synced",
+                            "Value will be sent over the network to remote users. This is needed if this value should be the same locally and remotely. Synced parameters count towards the total memory usage."),
+                        centeredLabel);
             }
 
             private void HandleParameterEvents()
@@ -595,13 +676,14 @@ namespace AwAVR.VRCSDKPlus
                 if (!parametersOrderList.TryGetActiveIndex(out int index)) return;
                 if (VRCSDKPlusToolbox.HasReceivedCommand(VRCSDKPlusToolbox.EventCommands.Duplicate))
                     DuplicateParameter(index);
-                
+
                 if (VRCSDKPlusToolbox.HasReceivedAnyDelete())
                     DeleteParameter(index);
             }
 
-            
+
             #region Automated Methods
+
             [MenuItem("CONTEXT/VRCExpressionParameters/[SDK+] Toggle Editor", false, 899)]
             private static void ToggleEditor()
             {
@@ -613,18 +695,20 @@ namespace AwAVR.VRCSDKPlus
                     Debug.LogError("[VRCSDK+] VRCExpressionParameters was not found! Could not apply custom editor.");
                     return;
                 }
+
                 if (editorActive) OverrideEditor(targetType, typeof(VRCParamsPlus));
                 else
                 {
                     var expressionsEditor = ExtendedGetType("VRCExpressionParametersEditor");
                     if (expressionsEditor == null)
                     {
-                        Debug.LogWarning("[VRCSDK+] VRCExpressionParametersEditor was not found! Could not apply custom editor");
+                        Debug.LogWarning(
+                            "[VRCSDK+] VRCExpressionParametersEditor was not found! Could not apply custom editor");
                         return;
                     }
+
                     OverrideEditor(targetType, expressionsEditor);
                 }
-
             }
 
             private void RefreshAllParameterStatus()
@@ -635,17 +719,21 @@ namespace AwAVR.VRCSDKPlus
                     expressionParameters.parameters = Array.Empty<VRCExpressionParameters.Parameter>();
                     EditorUtility.SetDirty(expressionParameters);
                 }
+
                 var parameters = expressionParameters.parameters;
                 _parameterStatus = new ParameterStatus[parameters.Length];
 
                 for (int index = 0; index < parameters.Length; index++)
                 {
                     var exParameter = expressionParameters.parameters[index];
-                    AnimatorControllerParameter matchedParameter = validParameters.FirstOrDefault(conParam => conParam.name == exParameter.name);
+                    AnimatorControllerParameter matchedParameter =
+                        validParameters.FirstOrDefault(conParam => conParam.name == exParameter.name);
                     bool parameterEmpty = string.IsNullOrEmpty(exParameter.name);
                     bool parameterIsValid = matchedParameter != null;
                     bool parameterAddable = avatar && !parameterIsValid && !parameterEmpty;
-                    bool parameterIsDuplicate = !parameterEmpty && expressionParameters.parameters.Where((p2, i) => index != i && exParameter.name == p2.name).Any(); ;
+                    bool parameterIsDuplicate = !parameterEmpty && expressionParameters.parameters
+                        .Where((p2, i) => index != i && exParameter.name == p2.name).Any();
+                    ;
                     bool hasWarning = (avatar && !parameterIsValid) || parameterEmpty || parameterIsDuplicate;
                     _parameterStatus[index] = new ParameterStatus()
                     {
@@ -688,7 +776,7 @@ namespace AwAVR.VRCSDKPlus
             private void DuplicateParameter(int index)
             {
                 parameterList.InsertArrayElementAtIndex(index);
-                MakeParameterUnique(index+1);
+                MakeParameterUnique(index + 1);
                 parameterList.serializedObject.ApplyModifiedProperties();
                 RefreshAllParameterStatus();
             }
@@ -699,6 +787,7 @@ namespace AwAVR.VRCSDKPlus
                 parameterList.serializedObject.ApplyModifiedProperties();
                 RefreshAllParameterStatus();
             }
+
             private void MakeParameterUnique(int index)
             {
                 var newElement = parameterList.GetArrayElementAtIndex(index);
@@ -711,6 +800,7 @@ namespace AwAVR.VRCSDKPlus
                         var p = parameterList.GetArrayElementAtIndex(i);
                         if (p.FindPropertyRelative("name").stringValue == newName) return false;
                     }
+
                     return true;
                 });
             }
@@ -725,8 +815,11 @@ namespace AwAVR.VRCSDKPlus
                 internal bool hasWarning;
                 internal AnimatorControllerParameter matchedParameter;
             }
-
         }
+
+        #endregion
+
+        #region Menu
 
         internal sealed class VRCMenuPlus : Editor, IHasCustomMenu
         {
@@ -744,6 +837,7 @@ namespace AwAVR.VRCSDKPlus
             private static bool isMoving;
 
             #region Initialization
+
             private void ReInitializeAll()
             {
                 CheckAvatar();
@@ -806,10 +900,13 @@ namespace AwAVR.VRCSDKPlus
                         isMoving = false;
                         Repaint();
                     }
+
                     EditorGUI.LabelField(rect, $"Controls ({_controlsList.count} / 8)");
 
                     // Draw copy, paste, duplicate, and move buttons
+
                     #region Rects
+
                     var copyRect = new Rect(
                         rect.x + rect.width - rect.height - ((rect.height + VRCSDKPlusToolbox.Styles.Padding) * 3),
                         rect.y,
@@ -833,7 +930,7 @@ namespace AwAVR.VRCSDKPlus
                         duplicateRect.y,
                         duplicateRect.height,
                         duplicateRect.height);
-                    
+
                     #endregion
 
                     bool isFull = _controlsList.count >= 8;
@@ -848,7 +945,6 @@ namespace AwAVR.VRCSDKPlus
                         w_MakeRectLinkCursor(copyRect);
                         if (GUI.Button(copyRect, VRCSDKPlusToolbox.GUIContent.Copy, GUI.skin.label))
                             CopyControl(index);
-                                
 
                         #endregion
 
@@ -859,7 +955,11 @@ namespace AwAVR.VRCSDKPlus
                         using (new EditorGUI.DisabledScope(isFull))
                         {
                             w_MakeRectLinkCursor(duplicateRect);
-                            if (GUI.Button(duplicateRect, isFull ? new GUIContent(VRCSDKPlusToolbox.GUIContent.Duplicate) { tooltip = VRCSDKPlusToolbox.GUIContent.MenuFullTooltip } : VRCSDKPlusToolbox.GUIContent.Duplicate, GUI.skin.label))
+                            if (GUI.Button(duplicateRect,
+                                    isFull
+                                        ? new GUIContent(VRCSDKPlusToolbox.GUIContent.Duplicate)
+                                            { tooltip = VRCSDKPlusToolbox.GUIContent.MenuFullTooltip }
+                                        : VRCSDKPlusToolbox.GUIContent.Duplicate, GUI.skin.label))
                                 DuplicateControl(index);
                         }
 
@@ -867,13 +967,17 @@ namespace AwAVR.VRCSDKPlus
                     }
 
                     #region Paste
+
                     using (new EditorGUI.DisabledScope(!CanPasteControl()))
                     {
                         w_MakeRectLinkCursor(pasteRect);
                         if (GUI.Button(pasteRect, VRCSDKPlusToolbox.GUIContent.Paste, GUI.skin.label))
                         {
                             var menu = new GenericMenu();
-                            menu.AddItem(new GUIContent("Paste values"), false, isEmpty || !hasFocus ? (GenericMenu.MenuFunction)null : () => PasteControl(index, false));
+                            menu.AddItem(new GUIContent("Paste values"), false,
+                                isEmpty || !hasFocus
+                                    ? (GenericMenu.MenuFunction)null
+                                    : () => PasteControl(index, false));
                             menu.AddItem(
                                 new GUIContent("Insert as new"),
                                 false,
@@ -882,14 +986,22 @@ namespace AwAVR.VRCSDKPlus
                             menu.ShowAsContext();
                         }
                     }
+
                     #endregion
 
 
                     #region Move
+
                     using (new EditorGUI.DisabledScope((isMoving && isFull) || (!isMoving && (!hasFocus || isEmpty))))
                     {
                         w_MakeRectLinkCursor(moveRect);
-                        if (GUI.Button(moveRect, isMoving ? isFull ? new GUIContent(VRCSDKPlusToolbox.GUIContent.Place) {tooltip = VRCSDKPlusToolbox.GUIContent.MenuFullTooltip} : VRCSDKPlusToolbox.GUIContent.Place : VRCSDKPlusToolbox.GUIContent.Move, GUI.skin.label))
+                        if (GUI.Button(moveRect,
+                                isMoving
+                                    ? isFull
+                                        ? new GUIContent(VRCSDKPlusToolbox.GUIContent.Place)
+                                            { tooltip = VRCSDKPlusToolbox.GUIContent.MenuFullTooltip }
+                                        : VRCSDKPlusToolbox.GUIContent.Place
+                                    : VRCSDKPlusToolbox.GUIContent.Move, GUI.skin.label))
                         {
                             if (!isMoving) MoveControl(index);
                             else PlaceControl(index);
@@ -897,8 +1009,6 @@ namespace AwAVR.VRCSDKPlus
                     }
 
                     #endregion
-
-
                 };
                 _controlsList.drawElementCallback = (rect2, index, _, focused) =>
                 {
@@ -909,26 +1019,30 @@ namespace AwAVR.VRCSDKPlus
                     rect2.width -= 48;
                     // Draw control type
                     EditorGUI.LabelField(rect2, controlType.ToString(), focused
-                            ? VRCSDKPlusToolbox.Styles.Label.TypeFocused
-                            : VRCSDKPlusToolbox.Styles.Label.Type);
+                        ? VRCSDKPlusToolbox.Styles.Label.TypeFocused
+                        : VRCSDKPlusToolbox.Styles.Label.Type);
 
                     // Draw control name
                     var nameGuiContent = new GUIContent(controlProp.FindPropertyRelative("name").stringValue);
                     bool emptyName = string.IsNullOrEmpty(nameGuiContent.text);
                     if (emptyName) nameGuiContent.text = "[Unnamed]";
 
-                    var nameRect = new Rect(rect2.x, rect2.y, VRCSDKPlusToolbox.Styles.Label.RichText.CalcSize(nameGuiContent).x, rect2.height);
+                    var nameRect = new Rect(rect2.x, rect2.y,
+                        VRCSDKPlusToolbox.Styles.Label.RichText.CalcSize(nameGuiContent).x, rect2.height);
 
                     EditorGUI.LabelField(nameRect,
                         new GUIContent(nameGuiContent),
-                        emptyName ? VRCSDKPlusToolbox.Styles.Label.PlaceHolder : VRCSDKPlusToolbox.Styles.Label.RichText);
+                        emptyName
+                            ? VRCSDKPlusToolbox.Styles.Label.PlaceHolder
+                            : VRCSDKPlusToolbox.Styles.Label.RichText);
 
                     w_MakeRectLinkCursor(removeRect);
-                    if (GUI.Button(removeRect, VRCSDKPlusToolbox.GUIContent.Remove, VRCSDKPlusToolbox.Styles.Label.RemoveIcon))
+                    if (GUI.Button(removeRect, VRCSDKPlusToolbox.GUIContent.Remove,
+                            VRCSDKPlusToolbox.Styles.Label.RemoveIcon))
                         DeleteControl(index);
 
                     var e = Event.current;
-                    
+
                     if (controlType == VRCExpressionsMenu.Control.ControlType.SubMenu)
                     {
                         if (e.clickCount == 2 && e.type == EventType.MouseDown && rect2.Contains(e.mousePosition))
@@ -948,15 +1062,15 @@ namespace AwAVR.VRCSDKPlus
                         if (!CanPasteControl()) menu.AddDisabledItem(new GUIContent("Paste"));
                         else
                         {
-                            menu.AddItem(new GUIContent("Paste/Values"), false, () =>  PasteControl(index, false));
-                            menu.AddItem(new GUIContent("Paste/As New"), false, () =>  PasteControl(index, true));
+                            menu.AddItem(new GUIContent("Paste/Values"), false, () => PasteControl(index, false));
+                            menu.AddItem(new GUIContent("Paste/As New"), false, () => PasteControl(index, true));
                         }
+
                         menu.AddSeparator(string.Empty);
                         menu.AddItem(new GUIContent("Duplicate"), false, () => DuplicateControl(index));
                         menu.AddItem(new GUIContent("Delete"), false, () => DeleteControl(index));
                         menu.ShowAsContext();
                     }
-                    
                 };
             }
 
@@ -966,6 +1080,7 @@ namespace AwAVR.VRCSDKPlus
                 var par = _avatar.expressionParameters;
                 return par.parameters?.FirstOrDefault(p => p.name == name);
             }
+
             #endregion
 
             public override void OnInspectorGUI()
@@ -977,7 +1092,6 @@ namespace AwAVR.VRCSDKPlus
                 DrawBody();
                 DrawFooter();
                 serializedObject.ApplyModifiedProperties();
-
             }
 
             private void OnEnable() => ReInitializeAll();
@@ -1021,7 +1135,8 @@ namespace AwAVR.VRCSDKPlus
                         }
                     }
 
-                    if (ClickableButton(_lastMenu.name, VRCSDKPlusToolbox.Styles.Label.Centered, GUILayout.ExpandWidth(true)))
+                    if (ClickableButton(_lastMenu.name, VRCSDKPlusToolbox.Styles.Label.Centered,
+                            GUILayout.ExpandWidth(true)))
                         EditorGUIUtility.PingObject(_lastMenu);
 
                     using (new EditorGUI.DisabledScope(_currentNode.Next == null))
@@ -1038,9 +1153,9 @@ namespace AwAVR.VRCSDKPlus
                             SetCurrentNode(_menuHistory.Last);
                         }
                     }
-
                 }
             }
+
             private void DrawHead()
             {
                 #region Avatar Selector
@@ -1053,7 +1168,8 @@ namespace AwAVR.VRCSDKPlus
                 {
                     using (new VRCSDKPlusToolbox.Container.Horizontal())
                     {
-                        var content = new GUIContent("Active Avatar", "The auto-fill and warnings will be based on this avatar's expression parameters");
+                        var content = new GUIContent("Active Avatar",
+                            "The auto-fill and warnings will be based on this avatar's expression parameters");
                         if (_validAvatars.Length >= 1)
                         {
                             using (var change = new EditorGUI.ChangeCheckScope())
@@ -1072,38 +1188,44 @@ namespace AwAVR.VRCSDKPlus
                                 }
                             }
                         }
-                        else EditorGUILayout.LabelField(content, new GUIContent("No Avatar Descriptors found"), VRCSDKPlusToolbox.Styles.Label.LabelDropdown);
+                        else
+                            EditorGUILayout.LabelField(content, new GUIContent("No Avatar Descriptors found"),
+                                VRCSDKPlusToolbox.Styles.Label.LabelDropdown);
 
                         if (_avatar == null || !_avatar.expressionParameters)
-                            GUILayout.Label(new GUIContent(VRCSDKPlusToolbox.GUIContent.Error) { tooltip = VRCSDKPlusToolbox.GUIContent.MissingParametersTooltip }, GUILayout.Width(18));
+                            GUILayout.Label(
+                                new GUIContent(VRCSDKPlusToolbox.GUIContent.Error)
+                                    { tooltip = VRCSDKPlusToolbox.GUIContent.MissingParametersTooltip },
+                                GUILayout.Width(18));
                     }
                 }
 
                 #endregion
             }
+
             void DrawBody()
             {
-
                 if (_controlsList == null)
                     InitializeList();
 
                 if (_controlsList.index == -1 && _controlsList.count != 0)
                     _controlsList.index = 0;
-                
+
                 _controlsList.DoLayoutList();
                 if (_controlsList.count == 0)
                     _controlsList.index = -1;
 
                 // EditorGUILayout.Separator();
 
-                var control = _controlsList.index < 0 || _controlsList.index >= _controlsList.count ? null : _controlsList.serializedProperty.GetArrayElementAtIndex(_controlsList.index);
+                var control = _controlsList.index < 0 || _controlsList.index >= _controlsList.count
+                    ? null
+                    : _controlsList.serializedProperty.GetArrayElementAtIndex(_controlsList.index);
                 var expressionParameters = _avatar == null ? null : _avatar.expressionParameters;
 
                 if (VRCSDKPlusToolbox.Preferences.CompactMode)
                     ControlRenderer.DrawControlCompact(control, expressionParameters);
                 else
                     ControlRenderer.DrawControl(control, expressionParameters);
-
             }
 
             void DrawFooter()
@@ -1112,7 +1234,7 @@ namespace AwAVR.VRCSDKPlus
                 {
                     GUILayout.FlexibleSpace();
                     GUILayout.Label("Editor by", VRCSDKPlusToolbox.Styles.Label.Watermark);
-                    Link("@awavr","https://github.com/awa-vr");
+                    Link("@awavr", "https://github.com/awa-vr");
                 }
             }
 
@@ -1132,40 +1254,45 @@ namespace AwAVR.VRCSDKPlus
 
                     return false;
                 }
-                
+
                 if (VRCSDKPlusToolbox.HasReceivedAnyDelete())
                     DeleteControl(index);
-                
+
                 if (VRCSDKPlusToolbox.HasReceivedCommand(VRCSDKPlusToolbox.EventCommands.Duplicate))
-                    if (!WarnIfFull()) DuplicateControl(index);
-                
+                    if (!WarnIfFull())
+                        DuplicateControl(index);
+
                 if (VRCSDKPlusToolbox.HasReceivedCommand(VRCSDKPlusToolbox.EventCommands.Copy))
                     CopyControl(index);
-                
+
                 if (VRCSDKPlusToolbox.HasReceivedCommand(VRCSDKPlusToolbox.EventCommands.Cut))
                     MoveControl(index);
-                
+
                 if (VRCSDKPlusToolbox.HasReceivedCommand(VRCSDKPlusToolbox.EventCommands.Paste))
                     if (isMoving && !WarnIfFull()) PlaceControl(index);
                     else if (CanPasteControl() && !WarnIfFull()) PasteControl(index, true);
             }
-            
+
             #region Control Methods
+
             private void CopyControl(int index)
             {
                 EditorGUIUtility.systemCopyBuffer =
                     VRCSDKPlusToolbox.Strings.ClipboardPrefixControl +
                     JsonUtility.ToJson(((VRCExpressionsMenu)target).controls[index]);
             }
-            
-            private static bool CanPasteControl() => EditorGUIUtility.systemCopyBuffer.StartsWith(VRCSDKPlusToolbox.Strings.ClipboardPrefixControl);
+
+            private static bool CanPasteControl() =>
+                EditorGUIUtility.systemCopyBuffer.StartsWith(VRCSDKPlusToolbox.Strings.ClipboardPrefixControl);
+
             private void PasteControl(int index, bool asNew)
             {
                 if (!CanPasteControl()) return;
                 if (!asNew)
                 {
                     var control = JsonUtility.FromJson<VRCExpressionsMenu.Control>(
-                        EditorGUIUtility.systemCopyBuffer.Substring(VRCSDKPlusToolbox.Strings.ClipboardPrefixControl.Length));
+                        EditorGUIUtility.systemCopyBuffer.Substring(VRCSDKPlusToolbox.Strings.ClipboardPrefixControl
+                            .Length));
 
                     Undo.RecordObject(target, "Paste control values");
                     _lastMenu.controls[index] = control;
@@ -1174,7 +1301,8 @@ namespace AwAVR.VRCSDKPlus
                 else
                 {
                     var newControl = JsonUtility.FromJson<VRCExpressionsMenu.Control>(
-                        EditorGUIUtility.systemCopyBuffer.Substring(VRCSDKPlusToolbox.Strings.ClipboardPrefixControl.Length));
+                        EditorGUIUtility.systemCopyBuffer.Substring(VRCSDKPlusToolbox.Strings.ClipboardPrefixControl
+                            .Length));
 
                     Undo.RecordObject(target, "Insert control as new");
                     if (_lastMenu.controls.Count <= 0)
@@ -1189,6 +1317,7 @@ namespace AwAVR.VRCSDKPlus
                         _lastMenu.controls.Insert(insertIndex, newControl);
                         _controlsList.index = insertIndex;
                     }
+
                     EditorUtility.SetDirty(_lastMenu);
                 }
             }
@@ -1199,9 +1328,10 @@ namespace AwAVR.VRCSDKPlus
                 controlsProp.InsertArrayElementAtIndex(index);
                 _controlsList.index = index + 1;
 
-                var newElement = controlsProp.GetArrayElementAtIndex(index+1);
+                var newElement = controlsProp.GetArrayElementAtIndex(index + 1);
                 var lastName = newElement.FindPropertyRelative("name").stringValue;
-                newElement.FindPropertyRelative("name").stringValue = VRCSDKPlusToolbox.GenerateUniqueString(lastName, newName => newName != lastName, false);
+                newElement.FindPropertyRelative("name").stringValue =
+                    VRCSDKPlusToolbox.GenerateUniqueString(lastName, newName => newName != lastName, false);
 
                 if (Event.current.shift) return;
                 var menuParameter = newElement.FindPropertyRelative("parameter");
@@ -1211,11 +1341,13 @@ namespace AwAVR.VRCSDKPlus
                 var matchedParameter = FetchParameter(parName);
                 if (matchedParameter == null) return;
                 var controlType = newElement.FindPropertyRelative("type").ToControlType();
-                if (controlType != VRCExpressionsMenu.Control.ControlType.Button && controlType != VRCExpressionsMenu.Control.ControlType.Toggle) return;
+                if (controlType != VRCExpressionsMenu.Control.ControlType.Button &&
+                    controlType != VRCExpressionsMenu.Control.ControlType.Toggle) return;
 
                 if (matchedParameter.valueType == VRCExpressionParameters.ValueType.Bool)
                 {
-                    menuParameter.FindPropertyRelative("name").stringValue = VRCSDKPlusToolbox.GenerateUniqueString(parName, s => s != parName, false);
+                    menuParameter.FindPropertyRelative("name").stringValue =
+                        VRCSDKPlusToolbox.GenerateUniqueString(parName, s => s != parName, false);
                 }
                 else
                 {
@@ -1248,7 +1380,7 @@ namespace AwAVR.VRCSDKPlus
 
                     if (_lastMenu.controls.Count <= 0)
                         _lastMenu.controls.Add(moveTargetControl);
-                    else 
+                    else
                     {
                         var insertIndex = index + 1;
                         if (insertIndex < 0) insertIndex = 0;
@@ -1265,8 +1397,11 @@ namespace AwAVR.VRCSDKPlus
 
             #endregion
 
-            public void AddItemsToMenu(GenericMenu menu) => menu.AddItem(new GUIContent("Compact Mode"), VRCSDKPlusToolbox.Preferences.CompactMode, ToggleCompactMode);
-            private static void ToggleCompactMode() => VRCSDKPlusToolbox.Preferences.CompactMode = !VRCSDKPlusToolbox.Preferences.CompactMode;
+            public void AddItemsToMenu(GenericMenu menu) => menu.AddItem(new GUIContent("Compact Mode"),
+                VRCSDKPlusToolbox.Preferences.CompactMode, ToggleCompactMode);
+
+            private static void ToggleCompactMode() => VRCSDKPlusToolbox.Preferences.CompactMode =
+                !VRCSDKPlusToolbox.Preferences.CompactMode;
 
             [MenuItem("CONTEXT/VRCExpressionsMenu/[SDK+] Toggle Editor", false, 899)]
             private static void ToggleEditor()
@@ -1278,15 +1413,18 @@ namespace AwAVR.VRCSDKPlus
                     Debug.LogError("[VRCSDK+] VRCExpressionsMenu was not found! Could not apply custom editor.");
                     return;
                 }
+
                 if (editorActive) OverrideEditor(targetType, typeof(VRCMenuPlus));
                 else
                 {
                     var menuEditor = ExtendedGetType("VRCExpressionsMenuEditor");
                     if (menuEditor == null)
                     {
-                        Debug.LogWarning("[VRCSDK+] VRCExpressionsMenuEditor was not found! Could not apply custom editor.");
+                        Debug.LogWarning(
+                            "[VRCSDK+] VRCExpressionsMenuEditor was not found! Could not apply custom editor.");
                         return;
                     }
+
                     OverrideEditor(targetType, menuEditor);
                 }
                 //else OverrideEditor(typeof(VRCExpressionsMenu), Type.GetType("VRCExpressionsMenuEditor, Assembly-CSharp-Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"));
@@ -1390,14 +1528,17 @@ namespace AwAVR.VRCSDKPlus
                     var helpRect = new Rect(typeRect.x + typeRect.width + 1, rect.y, 18, 18);
                     var parameterRect = new Rect(rect.x, rect.y + 21, rect.width - CompactIconSpace, 18);
                     var styleRect = new Rect(rect.x, rect.y + 42, rect.width - CompactIconSize, 18);
-                    var iconRect = new Rect(rect.x + rect.width - CompactIconSize, rect.y, CompactIconSize, CompactIconSize);
+                    var iconRect = new Rect(rect.x + rect.width - CompactIconSize, rect.y, CompactIconSize,
+                        CompactIconSize);
 
                     DrawName(nameRect, property, false);
                     DrawType(typeRect, property, false);
                     DrawStyle(styleRect, property, false);
 
                     if (property != null)
-                        GUI.Label(helpRect, new GUIContent(VRCSDKPlusToolbox.GUIContent.Help) { tooltip = GetHelpMessage(property) }, GUIStyle.none);
+                        GUI.Label(helpRect,
+                            new GUIContent(VRCSDKPlusToolbox.GUIContent.Help) { tooltip = GetHelpMessage(property) },
+                            GUIStyle.none);
 
                     ParameterContainer(property, parameters, parameterRect);
 
@@ -1425,7 +1566,8 @@ namespace AwAVR.VRCSDKPlus
                     }
 
                     name.stringValue = EditorGUI.TextField(rect, name.stringValue);
-                    if (string.IsNullOrEmpty(name.stringValue)) GUI.Label(rect, "Name", VRCSDKPlusToolbox.Styles.Label.PlaceHolder);
+                    if (string.IsNullOrEmpty(name.stringValue))
+                        GUI.Label(rect, "Name", VRCSDKPlusToolbox.Styles.Label.PlaceHolder);
                 }
 
                 static void DrawType(Rect rect, SerializedProperty property, bool drawLabel)
@@ -1470,7 +1612,9 @@ namespace AwAVR.VRCSDKPlus
 
                     Rect colorRect = new Rect(rect.x, rect.y, rect.width - (toggleSize + 3) * 2, rect.height);
                     Rect boldRect = new Rect(colorRect.x + colorRect.width, rect.y, toggleSize, rect.height);
-                    Rect italicRect = new Rect(boldRect); italicRect.x += italicRect.width + 3; boldRect.width = toggleSize;
+                    Rect italicRect = new Rect(boldRect);
+                    italicRect.x += italicRect.width + 3;
+                    boldRect.width = toggleSize;
                     string rawName = property.FindPropertyRelative("name").stringValue;
                     Color textColor = Color.white;
 
@@ -1483,7 +1627,6 @@ namespace AwAVR.VRCSDKPlus
                         {
                             if (ColorUtility.TryParseHtmlString(m.Groups[1].Value, out Color newColor))
                                 textColor = newColor;
-
                         }
                     }
 
@@ -1495,27 +1638,28 @@ namespace AwAVR.VRCSDKPlus
                         rawName = Regex.Replace(rawName, @"</?color=?.*?>", string.Empty);
                         rawName = $"<color=#{ColorUtility.ToHtmlStringRGB(textColor)}>{rawName}</color>";
                     }
-                    
+
                     void SetCharTag(char c, bool state)
                     {
-                        rawName = !state ?
-                            Regex.Replace(rawName, $@"</?{c}>", string.Empty) : 
-                            $"<{c}>{rawName}</{c}>";
+                        rawName = !state ? Regex.Replace(rawName, $@"</?{c}>", string.Empty) : $"<{c}>{rawName}</{c}>";
                     }
 
                     w_MakeRectLinkCursor(boldRect);
                     EditorGUI.BeginChangeCheck();
-                    isBold = GUI.Toggle(boldRect, isBold, new GUIContent("<b>b</b>","Bold"), VRCSDKPlusToolbox.Styles.letterButton);
+                    isBold = GUI.Toggle(boldRect, isBold, new GUIContent("<b>b</b>", "Bold"),
+                        VRCSDKPlusToolbox.Styles.letterButton);
                     if (EditorGUI.EndChangeCheck()) SetCharTag('b', isBold);
 
                     w_MakeRectLinkCursor(italicRect);
                     EditorGUI.BeginChangeCheck();
-                    isItalic = GUI.Toggle(italicRect, isItalic, new GUIContent("<i>i</i>", "Italic"), VRCSDKPlusToolbox.Styles.letterButton);
+                    isItalic = GUI.Toggle(italicRect, isItalic, new GUIContent("<i>i</i>", "Italic"),
+                        VRCSDKPlusToolbox.Styles.letterButton);
                     if (EditorGUI.EndChangeCheck()) SetCharTag('i', isItalic);
 
 
                     property.FindPropertyRelative("name").stringValue = rawName;
                 }
+
                 static void DrawIcon(Rect rect, SerializedProperty property)
                 {
                     if (property == null)
@@ -1533,6 +1677,7 @@ namespace AwAVR.VRCSDKPlus
                         );
                     }
                 }
+
                 static void DrawHelp(Rect rect, SerializedProperty property)
                 {
                     if (property == null)
@@ -1544,22 +1689,29 @@ namespace AwAVR.VRCSDKPlus
                     string message = GetHelpMessage(property);
                     EditorGUI.HelpBox(rect, message, MessageType.Info);
                 }
+
                 static string GetHelpMessage(SerializedProperty property)
                 {
                     switch (property.FindPropertyRelative("type").ToControlType())
                     {
                         case VRCExpressionsMenu.Control.ControlType.Button:
-                            return "Click or hold to activate. The button remains active for a minimum 0.2s.\nWhile active the (Parameter) is set to (Value).\nWhen inactive the (Parameter) is reset to zero.";
+                            return
+                                "Click or hold to activate. The button remains active for a minimum 0.2s.\nWhile active the (Parameter) is set to (Value).\nWhen inactive the (Parameter) is reset to zero.";
                         case VRCExpressionsMenu.Control.ControlType.Toggle:
-                            return "Click to toggle on or off.\nWhen turned on the (Parameter) is set to (Value).\nWhen turned off the (Parameter) is reset to zero.";
+                            return
+                                "Click to toggle on or off.\nWhen turned on the (Parameter) is set to (Value).\nWhen turned off the (Parameter) is reset to zero.";
                         case VRCExpressionsMenu.Control.ControlType.SubMenu:
-                            return "Opens another expression menu.\nWhen opened the (Parameter) is set to (Value).\nWhen closed (Parameter) is reset to zero.";
+                            return
+                                "Opens another expression menu.\nWhen opened the (Parameter) is set to (Value).\nWhen closed (Parameter) is reset to zero.";
                         case VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet:
-                            return "Puppet menu that maps the joystick to two parameters (-1 to +1).\nWhen opened the (Parameter) is set to (Value).\nWhen closed (Parameter) is reset to zero.";
+                            return
+                                "Puppet menu that maps the joystick to two parameters (-1 to +1).\nWhen opened the (Parameter) is set to (Value).\nWhen closed (Parameter) is reset to zero.";
                         case VRCExpressionsMenu.Control.ControlType.FourAxisPuppet:
-                            return "Puppet menu that maps the joystick to four parameters (0 to 1).\nWhen opened the (Parameter) is set to (Value).\nWhen closed (Parameter) is reset to zero.";
+                            return
+                                "Puppet menu that maps the joystick to four parameters (0 to 1).\nWhen opened the (Parameter) is set to (Value).\nWhen closed (Parameter) is reset to zero.";
                         case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
-                            return "Puppet menu that sets a value based on joystick rotation. (0 to 1)\nWhen opened the (Parameter) is set to (Value).\nWhen closed (Parameter) is reset to zero.";
+                            return
+                                "Puppet menu that sets a value based on joystick rotation. (0 to 1)\nWhen opened the (Parameter) is set to (Value).\nWhen closed (Parameter) is reset to zero.";
                         default:
                             return "ERROR: Unable to load message - Invalid control type";
                     }
@@ -1569,23 +1721,29 @@ namespace AwAVR.VRCSDKPlus
 
                 #region Type Conversion
 
-                private static void ConversionEntry(SerializedProperty property, VRCExpressionsMenu.Control.ControlType tOld, VRCExpressionsMenu.Control.ControlType tNew)
+                private static void ConversionEntry(SerializedProperty property,
+                    VRCExpressionsMenu.Control.ControlType tOld, VRCExpressionsMenu.Control.ControlType tNew)
                 {
                     // Is old one button / toggle, and new one not?
                     if (
-                            (tOld == VRCExpressionsMenu.Control.ControlType.Button || tOld == VRCExpressionsMenu.Control.ControlType.Toggle) &&
-                            (tNew != VRCExpressionsMenu.Control.ControlType.Button && tNew != VRCExpressionsMenu.Control.ControlType.Toggle)
+                            (tOld == VRCExpressionsMenu.Control.ControlType.Button ||
+                             tOld == VRCExpressionsMenu.Control.ControlType.Toggle) &&
+                            (tNew != VRCExpressionsMenu.Control.ControlType.Button &&
+                             tNew != VRCExpressionsMenu.Control.ControlType.Toggle)
                         )
                         // Reset parameter
                         property.FindPropertyRelative("parameter").FindPropertyRelative("name").stringValue = "";
                     else if (
-                        (tOld != VRCExpressionsMenu.Control.ControlType.Button && tOld != VRCExpressionsMenu.Control.ControlType.Toggle) &&
-                        (tNew == VRCExpressionsMenu.Control.ControlType.Button || tNew == VRCExpressionsMenu.Control.ControlType.Toggle)
+                        (tOld != VRCExpressionsMenu.Control.ControlType.Button &&
+                         tOld != VRCExpressionsMenu.Control.ControlType.Toggle) &&
+                        (tNew == VRCExpressionsMenu.Control.ControlType.Button ||
+                         tNew == VRCExpressionsMenu.Control.ControlType.Toggle)
                     )
                         SetupSubParameters(property, tNew);
 
                     // Is either a submenu
-                    if (tOld == VRCExpressionsMenu.Control.ControlType.SubMenu || tNew == VRCExpressionsMenu.Control.ControlType.SubMenu)
+                    if (tOld == VRCExpressionsMenu.Control.ControlType.SubMenu ||
+                        tNew == VRCExpressionsMenu.Control.ControlType.SubMenu)
                         SetupSubParameters(property, tNew);
 
                     // Is either Puppet)
@@ -1601,7 +1759,8 @@ namespace AwAVR.VRCSDKPlus
                     property.FindPropertyRelative("type").enumValueIndex = tNew.GetEnumValueIndex();
                 }
 
-                private static bool IsPuppetConversion(VRCExpressionsMenu.Control.ControlType tOld, VRCExpressionsMenu.Control.ControlType tNew)
+                private static bool IsPuppetConversion(VRCExpressionsMenu.Control.ControlType tOld,
+                    VRCExpressionsMenu.Control.ControlType tNew)
                 {
                     return (
                                tOld == VRCExpressionsMenu.Control.ControlType.RadialPuppet ||
@@ -1615,7 +1774,8 @@ namespace AwAVR.VRCSDKPlus
                            );
                 }
 
-                private static void DoPuppetConversion(SerializedProperty property, VRCExpressionsMenu.Control.ControlType tNew)
+                private static void DoPuppetConversion(SerializedProperty property,
+                    VRCExpressionsMenu.Control.ControlType tNew)
                 {
                     var subParameters = property.FindPropertyRelative("subParameters");
                     var sub0 = subParameters.GetArrayElementAtIndex(0).FindPropertyRelative("name").stringValue;
@@ -1646,7 +1806,8 @@ namespace AwAVR.VRCSDKPlus
                     }
                 }
 
-                private static void SetupSubParameters(SerializedProperty property, VRCExpressionsMenu.Control.ControlType type)
+                private static void SetupSubParameters(SerializedProperty property,
+                    VRCExpressionsMenu.Control.ControlType type)
                 {
                     var subParameters = property.FindPropertyRelative("subParameters");
                     subParameters.ClearArray();
@@ -1679,7 +1840,6 @@ namespace AwAVR.VRCSDKPlus
                         MessageType.Warning
                     );
                 }*/
-
 
 
                 #region BuildParameterArray
@@ -1881,11 +2041,13 @@ namespace AwAVR.VRCSDKPlus
                     var isMissing = index == -2;
                     bool willWarn = isMissing || options.required && isEmpty;
                     string parameterName = property.FindPropertyRelative("name").stringValue;
-                    string warnMsg = targetParameters ? isMissing ? isFiltered ?
-                                $"Parameter ({parameterName}) not found or invalid" :
-                                $"Parameter ({parameterName}) not found on the active avatar descriptor" :
-                            "Parameter is blank. Control may be dysfunctional." :
-                        VRCSDKPlusToolbox.GUIContent.MissingParametersTooltip;
+                    string warnMsg = targetParameters
+                        ? isMissing
+                            ? isFiltered
+                                ? $"Parameter ({parameterName}) not found or invalid"
+                                : $"Parameter ({parameterName}) not found on the active avatar descriptor"
+                            : "Parameter is blank. Control may be dysfunctional."
+                        : VRCSDKPlusToolbox.GUIContent.MissingParametersTooltip;
 
                     var rectNotProvided = options.rect == default;
                     using (new GUILayout.HorizontalScope())
@@ -1903,8 +2065,13 @@ namespace AwAVR.VRCSDKPlus
                         var name = property.FindPropertyRelative("name");
 
                         Rect labelRect = new Rect(options.rect) { width = hasLabel ? 120 : 0 };
-                        Rect textfieldRect = new Rect(labelRect) { x = labelRect.x + labelRect.width, width = options.rect.width - labelRect.width - CONTENT_DROPDOWN_WIDTH - 2 };
-                        Rect dropdownRect = new Rect(textfieldRect) { x = textfieldRect.x + textfieldRect.width, width = CONTENT_DROPDOWN_WIDTH };
+                        Rect textfieldRect = new Rect(labelRect)
+                        {
+                            x = labelRect.x + labelRect.width,
+                            width = options.rect.width - labelRect.width - CONTENT_DROPDOWN_WIDTH - 2
+                        };
+                        Rect dropdownRect = new Rect(textfieldRect)
+                            { x = textfieldRect.x + textfieldRect.width, width = CONTENT_DROPDOWN_WIDTH };
                         Rect addRect = Rect.zero;
                         Rect warnRect = Rect.zero;
 
@@ -1912,14 +2079,19 @@ namespace AwAVR.VRCSDKPlus
                         {
                             textfieldRect.width -= missingFullWidth;
                             dropdownRect.x -= missingFullWidth;
-                            addRect = new Rect(options.rect) { x = textfieldRect.x + textfieldRect.width + CONTENT_DROPDOWN_WIDTH + 2, width = CONTENT_ADD_WIDTH };
+                            addRect = new Rect(options.rect)
+                            {
+                                x = textfieldRect.x + textfieldRect.width + CONTENT_DROPDOWN_WIDTH + 2,
+                                width = CONTENT_ADD_WIDTH
+                            };
                             warnRect = new Rect(addRect) { x = addRect.x + addRect.width, width = CONTENT_WARN_WIDTH };
                         }
                         else if (!targetParameters || options.required && isEmpty)
                         {
                             textfieldRect.width -= CONTENT_WARN_WIDTH;
                             dropdownRect.x -= CONTENT_WARN_WIDTH;
-                            warnRect = new Rect(dropdownRect) { x = dropdownRect.x + dropdownRect.width, width = CONTENT_WARN_WIDTH };
+                            warnRect = new Rect(dropdownRect)
+                                { x = dropdownRect.x + dropdownRect.width, width = CONTENT_WARN_WIDTH };
                         }
 
                         if (hasLabel) GUI.Label(labelRect, label);
@@ -1931,8 +2103,11 @@ namespace AwAVR.VRCSDKPlus
                         }
 
                         name.stringValue = EditorGUI.TextField(textfieldRect, name.stringValue);
-                        if (string.IsNullOrEmpty(name.stringValue)) GUI.Label(textfieldRect, "Parameter", VRCSDKPlusToolbox.Styles.Label.PlaceHolder);
-                        if (willWarn) GUI.Label(warnRect, new GUIContent(VRCSDKPlusToolbox.GUIContent.Warn) { tooltip = warnMsg });
+                        if (string.IsNullOrEmpty(name.stringValue))
+                            GUI.Label(textfieldRect, "Parameter", VRCSDKPlusToolbox.Styles.Label.PlaceHolder);
+                        if (willWarn)
+                            GUI.Label(warnRect,
+                                new GUIContent(VRCSDKPlusToolbox.GUIContent.Warn) { tooltip = warnMsg });
 
                         if (isMissing)
                         {
@@ -1940,7 +2115,8 @@ namespace AwAVR.VRCSDKPlus
 
                             if (!isFiltered)
                             {
-                                dummy = EditorGUI.Popup(addRect, -1, Enum.GetNames(typeof(VRCExpressionParameters.ValueType)));
+                                dummy = EditorGUI.Popup(addRect, -1,
+                                    Enum.GetNames(typeof(VRCExpressionParameters.ValueType)));
 
                                 addRect.x += 3;
                                 GUI.Label(addRect, "Add");
@@ -1955,7 +2131,14 @@ namespace AwAVR.VRCSDKPlus
                                 prop.FindPropertyRelative("valueType").enumValueIndex = dummy;
                                 prop.FindPropertyRelative("name").stringValue = name.stringValue;
                                 prop.FindPropertyRelative("saved").boolValue = true;
-                                try{ prop.FindPropertyRelative("networkSynced").boolValue = true; } catch{}
+                                try
+                                {
+                                    prop.FindPropertyRelative("networkSynced").boolValue = true;
+                                }
+                                catch
+                                {
+                                }
+
                                 so.ApplyModifiedProperties();
                             }
                         }
@@ -2008,54 +2191,67 @@ namespace AwAVR.VRCSDKPlus
                         var parameter = property.FindPropertyRelative("parameter");
 
                         var t = (VRCExpressionsMenu.Control.ControlType)property.FindPropertyRelative("type").intValue;
-                        bool isRequired = t == VRCExpressionsMenu.Control.ControlType.Button || t == VRCExpressionsMenu.Control.ControlType.Toggle;
-                        DrawParameterSelector(rectProvided ? string.Empty : "Parameter", parameter, parameters, new ParameterSelectorOptions()
-                        {
-                            rect = selectorRect,
-                            required = isRequired,
-                            extraGUI = () =>
+                        bool isRequired = t == VRCExpressionsMenu.Control.ControlType.Button ||
+                                          t == VRCExpressionsMenu.Control.ControlType.Toggle;
+                        DrawParameterSelector(rectProvided ? string.Empty : "Parameter", parameter, parameters,
+                            new ParameterSelectorOptions()
                             {
-                                #region Value selector
-
-                                var parameterName = parameter.FindPropertyRelative("name");
-                                var param = parameters?.parameters.FirstOrDefault(p => p.name == parameterName.stringValue);
-
-                                // Check what type the parameter is
-
-                                var value = property.FindPropertyRelative("value");
-                                switch (param?.valueType)
+                                rect = selectorRect,
+                                required = isRequired,
+                                extraGUI = () =>
                                 {
-                                    case VRCExpressionParameters.ValueType.Int:
-                                        value.floatValue = Mathf.Clamp(rectProvided ?
-                                            EditorGUI.IntField(valueRect, (int)value.floatValue) :
-                                            EditorGUILayout.IntField((int)value.floatValue, GUILayout.Width(CONTENT_VALUE_SELECTOR_WIDTH)), 0f, 255f);
-                                        break;
+                                    #region Value selector
 
-                                    case VRCExpressionParameters.ValueType.Float:
-                                        value.floatValue = Mathf.Clamp(rectProvided ?
-                                            EditorGUI.FloatField(valueRect, value.floatValue) :
-                                            EditorGUILayout.FloatField(value.floatValue, GUILayout.Width(CONTENT_VALUE_SELECTOR_WIDTH)), -1, 1);
-                                        break;
+                                    var parameterName = parameter.FindPropertyRelative("name");
+                                    var param = parameters?.parameters.FirstOrDefault(p =>
+                                        p.name == parameterName.stringValue);
 
-                                    case VRCExpressionParameters.ValueType.Bool:
-                                        using (new EditorGUI.DisabledScope(true))
-                                        {
-                                            if (rectProvided) EditorGUI.TextField(valueRect, string.Empty);
-                                            else EditorGUILayout.TextField(string.Empty, GUILayout.Width(CONTENT_VALUE_SELECTOR_WIDTH));
-                                        }
+                                    // Check what type the parameter is
 
-                                        value.floatValue = 1f;
-                                        break;
+                                    var value = property.FindPropertyRelative("value");
+                                    switch (param?.valueType)
+                                    {
+                                        case VRCExpressionParameters.ValueType.Int:
+                                            value.floatValue = Mathf.Clamp(
+                                                rectProvided
+                                                    ? EditorGUI.IntField(valueRect, (int)value.floatValue)
+                                                    : EditorGUILayout.IntField((int)value.floatValue,
+                                                        GUILayout.Width(CONTENT_VALUE_SELECTOR_WIDTH)), 0f, 255f);
+                                            break;
 
-                                    default:
-                                        value.floatValue = Mathf.Clamp(rectProvided ?
-                                            EditorGUI.FloatField(valueRect, value.floatValue) :
-                                            EditorGUILayout.FloatField(value.floatValue, GUILayout.Width(CONTENT_VALUE_SELECTOR_WIDTH)), -1, 255);
-                                        break;
+                                        case VRCExpressionParameters.ValueType.Float:
+                                            value.floatValue =
+                                                Mathf.Clamp(
+                                                    rectProvided
+                                                        ? EditorGUI.FloatField(valueRect, value.floatValue)
+                                                        : EditorGUILayout.FloatField(value.floatValue,
+                                                            GUILayout.Width(CONTENT_VALUE_SELECTOR_WIDTH)), -1, 1);
+                                            break;
+
+                                        case VRCExpressionParameters.ValueType.Bool:
+                                            using (new EditorGUI.DisabledScope(true))
+                                            {
+                                                if (rectProvided) EditorGUI.TextField(valueRect, string.Empty);
+                                                else
+                                                    EditorGUILayout.TextField(string.Empty,
+                                                        GUILayout.Width(CONTENT_VALUE_SELECTOR_WIDTH));
+                                            }
+
+                                            value.floatValue = 1f;
+                                            break;
+
+                                        default:
+                                            value.floatValue = Mathf.Clamp(
+                                                rectProvided
+                                                    ? EditorGUI.FloatField(valueRect, value.floatValue)
+                                                    : EditorGUILayout.FloatField(value.floatValue,
+                                                        GUILayout.Width(CONTENT_VALUE_SELECTOR_WIDTH)), -1, 255);
+                                            break;
+                                    }
+
+                                    #endregion
                                 }
-                                #endregion
-                            }
-                        });
+                            });
 
                         if (!rectProvided)
                             VRCSDKPlusToolbox.Container.EndLayout();
@@ -2099,7 +2295,9 @@ namespace AwAVR.VRCSDKPlus
                                         if (string.IsNullOrEmpty(path))
                                             path = $"Assets/{m.name}.asset";
                                         var parentPath = Path.GetDirectoryName(path);
-                                        var assetName = string.IsNullOrEmpty(nameProperty?.stringValue) ? $"{m.name} SubMenu.asset" : $"{nameProperty.stringValue} Menu.asset";
+                                        var assetName = string.IsNullOrEmpty(nameProperty?.stringValue)
+                                            ? $"{m.name} SubMenu.asset"
+                                            : $"{nameProperty.stringValue} Menu.asset";
                                         var newMenuPath = VRCSDKPlusToolbox.ReadyAssetPath(parentPath, assetName, true);
 
                                         var newMenu = CreateInstance<VRCExpressionsMenu>();
@@ -2109,8 +2307,13 @@ namespace AwAVR.VRCSDKPlus
                                         AssetDatabase.CreateAsset(newMenu, newMenuPath);
                                         subMenu.objectReferenceValue = newMenu;
                                     }
-                                GUILayout.Label(new GUIContent(VRCSDKPlusToolbox.GUIContent.Warn) { tooltip = "Submenu is empty. This control has no use." }, VRCSDKPlusToolbox.Styles.icon);
+
+                                GUILayout.Label(
+                                    new GUIContent(VRCSDKPlusToolbox.GUIContent.Warn)
+                                        { tooltip = "Submenu is empty. This control has no use." },
+                                    VRCSDKPlusToolbox.Styles.icon);
                             }
+
                             using (new EditorGUI.DisabledScope(emptySubmenu))
                             {
                                 if (ClickableButton(VRCSDKPlusToolbox.GUIContent.Folder, VRCSDKPlusToolbox.Styles.icon))
@@ -2122,7 +2325,8 @@ namespace AwAVR.VRCSDKPlus
                     }
                 }
 
-                static void CompactTwoAxisParametersContainer(SerializedProperty property, VRCExpressionParameters parameters)
+                static void CompactTwoAxisParametersContainer(SerializedProperty property,
+                    VRCExpressionParameters parameters)
                 {
                     using (new VRCSDKPlusToolbox.Container.Vertical())
                     {
@@ -2187,9 +2391,10 @@ namespace AwAVR.VRCSDKPlus
                             }
                         }
                     }
-
                 }
-                static void CompactFourAxisParametersContainer(SerializedProperty property, VRCExpressionParameters parameters)
+
+                static void CompactFourAxisParametersContainer(SerializedProperty property,
+                    VRCExpressionParameters parameters)
                 {
                     using (new VRCSDKPlusToolbox.Container.Vertical())
                     {
@@ -2282,8 +2487,8 @@ namespace AwAVR.VRCSDKPlus
                                 DrawLabel(labels.GetArrayElementAtIndex(3), "Name");
                         }
                     }
-
                 }
+
                 static void TwoAxisParametersContainer(SerializedProperty property, VRCExpressionParameters parameters)
                 {
                     VRCSDKPlusToolbox.Container.BeginLayout();
@@ -2412,31 +2617,42 @@ namespace AwAVR.VRCSDKPlus
                         {
                             if (!compact)
                                 using (new EditorGUI.DisabledScope(true))
-                                    EditorGUILayout.LabelField("Axis", type, VRCSDKPlusToolbox.Styles.Label.LabelDropdown);
+                                    EditorGUILayout.LabelField("Axis", type,
+                                        VRCSDKPlusToolbox.Styles.Label.LabelDropdown);
 
-                            EditorGUILayout.PropertyField(nameProperty, compact ? GUIContent.none : new GUIContent("Name"));
+                            EditorGUILayout.PropertyField(nameProperty,
+                                compact ? GUIContent.none : new GUIContent("Name"));
                             var nameRect = GUILayoutUtility.GetLastRect();
-                            if (compact && string.IsNullOrEmpty(nameProperty.stringValue)) GUI.Label(nameRect, $"{type}", VRCSDKPlusToolbox.Styles.Label.PlaceHolder);
+                            if (compact && string.IsNullOrEmpty(nameProperty.stringValue))
+                                GUI.Label(nameRect, $"{type}", VRCSDKPlusToolbox.Styles.Label.PlaceHolder);
                         }
 
-                        imgProperty.objectReferenceValue = EditorGUILayout.ObjectField(imgProperty.objectReferenceValue, typeof(Texture2D), false, GUILayout.Width(imgWidth), GUILayout.Height(imgHeight));
+                        imgProperty.objectReferenceValue = EditorGUILayout.ObjectField(imgProperty.objectReferenceValue,
+                            typeof(Texture2D), false, GUILayout.Width(imgWidth), GUILayout.Height(imgHeight));
                     }
 
                     if (!compact) EditorGUILayout.EndHorizontal();
-
                 }
 
                 #endregion
             }
-
         }
 
+        #endregion
 
         #region Helper Methods
+
         #region Clickables
-        internal static bool ClickableButton(string     label, GUIStyle                 style = null, params GUILayoutOption[] options) => ClickableButton(new GUIContent(label), style, options);
-        internal static bool ClickableButton(string     label, params GUILayoutOption[] options) => ClickableButton(new GUIContent(label), null, options);
-        internal static bool ClickableButton(GUIContent label, params GUILayoutOption[] options) => ClickableButton(label,                 null, options);
+
+        internal static bool ClickableButton(string label, GUIStyle style = null, params GUILayoutOption[] options) =>
+            ClickableButton(new GUIContent(label), style, options);
+
+        internal static bool ClickableButton(string label, params GUILayoutOption[] options) =>
+            ClickableButton(new GUIContent(label), null, options);
+
+        internal static bool ClickableButton(GUIContent label, params GUILayoutOption[] options) =>
+            ClickableButton(label, null, options);
+
         internal static bool ClickableButton(GUIContent label, GUIStyle style = null, params GUILayoutOption[] options)
         {
             if (style == null)
@@ -2445,6 +2661,7 @@ namespace AwAVR.VRCSDKPlus
             if (GUI.enabled) w_MakeRectLinkCursor();
             return clicked;
         }
+
         internal static void w_MakeRectLinkCursor(Rect rect = default)
         {
             if (!GUI.enabled) return;
@@ -2454,6 +2671,7 @@ namespace AwAVR.VRCSDKPlus
                 EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
             }
         }
+
         internal static bool w_MakeRectClickable(Rect rect = default)
         {
             if (rect == default) rect = GUILayoutUtility.GetLastRect();
@@ -2461,6 +2679,7 @@ namespace AwAVR.VRCSDKPlus
             var e = Event.current;
             return e.type == EventType.MouseDown && e.button == 0 && rect.Contains(e.mousePosition);
         }
+
         #endregion
 
         private static void Link(string label, string url)
@@ -2471,10 +2690,10 @@ namespace AwAVR.VRCSDKPlus
             if (GUILayout.Button(new GUIContent(label, url), VRCSDKPlusToolbox.Styles.Label.faintLinkLabel))
                 Application.OpenURL(url);
             w_UnderlineLastRectOnHover();
-            
+
             GUI.backgroundColor = bgcolor;
         }
-        
+
         internal static void w_UnderlineLastRectOnHover(Color? color = null)
         {
             if (color == null) color = new Color(0.3f, 0.7f, 1);
@@ -2485,9 +2704,8 @@ namespace AwAVR.VRCSDKPlus
                 if (rect.Contains(mp)) EditorGUI.DrawRect(new Rect(rect.x, rect.yMax - 1, rect.width, 1), color.Value);
                 EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
             }
-
         }
-        
+
         internal static System.Type ExtendedGetType(string typeName)
         {
             var myType = System.Type.GetType(typeName);
@@ -2496,16 +2714,19 @@ namespace AwAVR.VRCSDKPlus
             foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
             {
                 var types = assembly.GetTypes();
-                myType = types.FirstOrDefault(t  => t.FullName == typeName);
+                myType = types.FirstOrDefault(t => t.FullName == typeName);
                 if (myType != null)
                     return myType;
                 myType = types.FirstOrDefault(t => t.Name == typeName);
                 if (myType != null)
                     return myType;
             }
+
             return null;
         }
-        internal static void RefreshAvatar(ref VRCAvatarDescriptor avatar, ref VRCAvatarDescriptor[] validAvatars, System.Action OnAvatarChanged = null, System.Func<VRCAvatarDescriptor, bool> favoredAvatar = null)
+
+        internal static void RefreshAvatar(ref VRCAvatarDescriptor avatar, ref VRCAvatarDescriptor[] validAvatars,
+            System.Action OnAvatarChanged = null, System.Func<VRCAvatarDescriptor, bool> favoredAvatar = null)
         {
             validAvatars = Object.FindObjectsOfType<VRCAvatarDescriptor>();
             if (avatar) return;
@@ -2520,20 +2741,29 @@ namespace AwAVR.VRCSDKPlus
             OnAvatarChanged?.Invoke();
         }
 
-        internal static bool DrawAdvancedAvatarFull(ref VRCAvatarDescriptor avatar, VRCAvatarDescriptor[] validAvatars, System.Action OnAvatarChanged = null, bool warnNonHumanoid = true, bool warnPrefab = true, bool warnDoubleFX = true, string label = "Avatar", string tooltip = "The Targeted VRCAvatar", System.Action ExtraGUI = null)
-            => DrawAdvancedAvatarField(ref avatar, validAvatars, OnAvatarChanged, label, tooltip, ExtraGUI) && DrawAdvancedAvatarWarning(avatar, warnNonHumanoid, warnPrefab, warnDoubleFX);
+        internal static bool DrawAdvancedAvatarFull(ref VRCAvatarDescriptor avatar, VRCAvatarDescriptor[] validAvatars,
+            System.Action OnAvatarChanged = null, bool warnNonHumanoid = true, bool warnPrefab = true,
+            bool warnDoubleFX = true, string label = "Avatar", string tooltip = "The Targeted VRCAvatar",
+            System.Action ExtraGUI = null)
+            => DrawAdvancedAvatarField(ref avatar, validAvatars, OnAvatarChanged, label, tooltip, ExtraGUI) &&
+               DrawAdvancedAvatarWarning(avatar, warnNonHumanoid, warnPrefab, warnDoubleFX);
 
-        private static VRCAvatarDescriptor DrawAdvancedAvatarField(ref VRCAvatarDescriptor avatar, VRCAvatarDescriptor[] validAvatars, System.Action OnAvatarChanged = null, string label = "Avatar", string tooltip = "The Targeted VRCAvatar", System.Action ExtraGUI = null)
+        private static VRCAvatarDescriptor DrawAdvancedAvatarField(ref VRCAvatarDescriptor avatar,
+            VRCAvatarDescriptor[] validAvatars, System.Action OnAvatarChanged = null, string label = "Avatar",
+            string tooltip = "The Targeted VRCAvatar", System.Action ExtraGUI = null)
         {
             using (new GUILayout.HorizontalScope())
             {
                 var avatarContent = new GUIContent(label, tooltip);
-                if (validAvatars == null || validAvatars.Length <= 0) EditorGUILayout.LabelField(avatarContent, new GUIContent("No Avatar Descriptors Found"));
+                if (validAvatars == null || validAvatars.Length <= 0)
+                    EditorGUILayout.LabelField(avatarContent, new GUIContent("No Avatar Descriptors Found"));
                 else
                 {
                     using (var change = new EditorGUI.ChangeCheckScope())
                     {
-                        int dummy = EditorGUILayout.Popup(avatarContent, avatar ? Array.IndexOf(validAvatars, avatar) : -1, validAvatars.Where(a => a).Select(x => x.name).ToArray());
+                        int dummy = EditorGUILayout.Popup(avatarContent,
+                            avatar ? Array.IndexOf(validAvatars, avatar) : -1,
+                            validAvatars.Where(a => a).Select(x => x.name).ToArray());
                         if (change.changed)
                         {
                             avatar = validAvatars[dummy];
@@ -2545,12 +2775,15 @@ namespace AwAVR.VRCSDKPlus
 
                 ExtraGUI?.Invoke();
             }
+
             return avatar;
         }
 
-        private static bool DrawAdvancedAvatarWarning(VRCAvatarDescriptor avatar, bool warnNonHumanoid = true, bool warnPrefab = true, bool warnDoubleFX = true)
+        private static bool DrawAdvancedAvatarWarning(VRCAvatarDescriptor avatar, bool warnNonHumanoid = true,
+            bool warnPrefab = true, bool warnDoubleFX = true)
         {
-            return (!warnPrefab || !DrawPrefabWarning(avatar)) && (!warnDoubleFX || !DrawDoubleFXWarning(avatar, warnNonHumanoid));
+            return (!warnPrefab || !DrawPrefabWarning(avatar)) &&
+                   (!warnDoubleFX || !DrawDoubleFXWarning(avatar, warnNonHumanoid));
         }
 
         private static bool DrawPrefabWarning(VRCAvatarDescriptor avatar)
@@ -2559,11 +2792,16 @@ namespace AwAVR.VRCSDKPlus
             bool isPrefab = PrefabUtility.IsPartOfAnyPrefab(avatar.gameObject);
             if (isPrefab)
             {
-                EditorGUILayout.HelpBox("Target Avatar is a part of a prefab. Prefab unpacking is required.", MessageType.Error);
-                if (GUILayout.Button("Unpack")) PrefabUtility.UnpackPrefabInstance(avatar.gameObject, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                EditorGUILayout.HelpBox("Target Avatar is a part of a prefab. Prefab unpacking is required.",
+                    MessageType.Error);
+                if (GUILayout.Button("Unpack"))
+                    PrefabUtility.UnpackPrefabInstance(avatar.gameObject, PrefabUnpackMode.Completely,
+                        InteractionMode.AutomatedAction);
             }
+
             return isPrefab;
         }
+
         private static bool DrawDoubleFXWarning(VRCAvatarDescriptor avatar, bool warnNonHumanoid = true)
         {
             if (!avatar) return false;
@@ -2574,7 +2812,9 @@ namespace AwAVR.VRCSDKPlus
                 var isDoubled = layers[3].type == layers[4].type;
                 if (isDoubled)
                 {
-                    EditorGUILayout.HelpBox("Your Avatar's Action playable layer is set as FX. This is an uncommon bug.", MessageType.Error);
+                    EditorGUILayout.HelpBox(
+                        "Your Avatar's Action playable layer is set as FX. This is an uncommon bug.",
+                        MessageType.Error);
                     if (GUILayout.Button("Fix"))
                     {
                         avatar.baseAnimationLayers[3].type = VRCAvatarDescriptor.AnimLayerType.Action;
@@ -2586,27 +2826,38 @@ namespace AwAVR.VRCSDKPlus
             }
 
             if (warnNonHumanoid)
-                EditorGUILayout.HelpBox("Your Avatar's descriptor is set as Non-Humanoid! Please make sure that your Avatar's rig is Humanoid.", MessageType.Error);
+                EditorGUILayout.HelpBox(
+                    "Your Avatar's descriptor is set as Non-Humanoid! Please make sure that your Avatar's rig is Humanoid.",
+                    MessageType.Error);
             return warnNonHumanoid;
-
         }
 
         private static void GreenLog(string msg) => Debug.Log($"<color=green>[VRCSDK+] </color>{msg}");
+
         #endregion
 
         #region Automated Methods
+
         private static void OverrideEditor(Type componentType, Type editorType)
         {
-            Type attributeType = Type.GetType("UnityEditor.CustomEditorAttributes, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
-            Type monoEditorType = Type.GetType("UnityEditor.CustomEditorAttributes+MonoEditorType, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+            Type attributeType =
+                Type.GetType(
+                    "UnityEditor.CustomEditorAttributes, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+            Type monoEditorType =
+                Type.GetType(
+                    "UnityEditor.CustomEditorAttributes+MonoEditorType, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
             var editorsField = attributeType.GetField("kSCustomEditors", BindingFlags.Static | BindingFlags.NonPublic);
-            var inspectorField = monoEditorType.GetField("m_InspectorType", BindingFlags.Public | BindingFlags.Instance);
+            var inspectorField =
+                monoEditorType.GetField("m_InspectorType", BindingFlags.Public | BindingFlags.Instance);
             var editorDictionary = editorsField.GetValue(null) as IDictionary;
             var editorsList = editorDictionary[componentType] as IList;
             inspectorField.SetValue(editorsList[0], editorType);
 
-            var inspectorType = Type.GetType("UnityEditor.InspectorWindow, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
-            var myTestMethod = inspectorType.GetMethod("RefreshInspectors", BindingFlags.NonPublic | BindingFlags.Static);
+            var inspectorType =
+                Type.GetType(
+                    "UnityEditor.InspectorWindow, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+            var myTestMethod =
+                inspectorType.GetMethod("RefreshInspectors", BindingFlags.NonPublic | BindingFlags.Static);
             myTestMethod.Invoke(null, null);
         }
 
@@ -2622,14 +2873,18 @@ namespace AwAVR.VRCSDKPlus
         {
             EditorApplication.delayCall -= InitialOverride;
 
-            Type attributeType = Type.GetType("UnityEditor.CustomEditorAttributes, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
-            FieldInfo editorsInitializedField = attributeType.GetField("s_Initialized", BindingFlags.Static | BindingFlags.NonPublic);
+            Type attributeType =
+                Type.GetType(
+                    "UnityEditor.CustomEditorAttributes, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+            FieldInfo editorsInitializedField =
+                attributeType.GetField("s_Initialized", BindingFlags.Static | BindingFlags.NonPublic);
 
             try
             {
                 if (!(bool)editorsInitializedField.GetValue(null))
                 {
-                    MethodInfo rebuildEditorsMethod = attributeType.GetMethod("Rebuild", BindingFlags.Static | BindingFlags.NonPublic);
+                    MethodInfo rebuildEditorsMethod =
+                        attributeType.GetMethod("Rebuild", BindingFlags.Static | BindingFlags.NonPublic);
                     rebuildEditorsMethod.Invoke(null, null);
                     editorsInitializedField.SetValue(null, true);
                 }
@@ -2642,12 +2897,12 @@ namespace AwAVR.VRCSDKPlus
                 Debug.LogException(e);
                 Debug.LogError("[VRCSDK+] Failed to override editors!");
             }
-
         }
 
         #endregion
 
         #region Quick Avatar
+
         [MenuItem("CONTEXT/VRCAvatarDescriptor/[SDK+] Quick Setup", false, 650)]
         private static void QuickSetup(MenuCommand command)
         {
@@ -2664,7 +2919,9 @@ namespace AwAVR.VRCSDKPlus
                 float worldXPosition;
                 float worldYPosition;
                 float worldZPosition;
+
                 #region View Position
+
                 if (leftEye && rightEye)
                 {
                     Transform betterLeft = leftEye.parent.Find("LeftEye");
@@ -2680,14 +2937,18 @@ namespace AwAVR.VRCSDKPlus
                 {
                     Vector3 headPosition = ani.GetBoneTransform(HumanBodyBones.Head).position;
                     worldXPosition = headPosition.x;
-                    worldYPosition = headPosition.y + ((headPosition.y - root.position.y) * 1.0357f - (headPosition.y - root.position.y));
+                    worldYPosition = headPosition.y + ((headPosition.y - root.position.y) * 1.0357f -
+                                                       (headPosition.y - root.position.y));
                     worldZPosition = 0;
                 }
 
-                Vector3 realView = root.InverseTransformPoint(new Vector3(worldXPosition, worldYPosition, worldZPosition));
-                realView = new Vector3(Mathf.Approximately(realView.x, 0) ? 0 : realView.x, realView.y, (realView.z + 0.0547f * realView.y) / 2);
+                Vector3 realView =
+                    root.InverseTransformPoint(new Vector3(worldXPosition, worldYPosition, worldZPosition));
+                realView = new Vector3(Mathf.Approximately(realView.x, 0) ? 0 : realView.x, realView.y,
+                    (realView.z + 0.0547f * realView.y) / 2);
 
                 serialized.FindProperty("ViewPosition").vector3Value = realView;
+
                 #endregion
 
                 #region Eyes
@@ -2701,6 +2962,7 @@ namespace AwAVR.VRCSDKPlus
                     eyes.FindPropertyRelative("rightEye").objectReferenceValue = rightEye;
 
                     #region Rotation Values
+
                     const float axisValue = 0.1305262f;
                     const float wValue = 0.9914449f;
 
@@ -2724,9 +2986,11 @@ namespace AwAVR.VRCSDKPlus
                     SetLeftAndRight(right, rightValue);
                     SetLeftAndRight(down, downValue);
                     SetLeftAndRight(left, leftValue);
+
                     #endregion
 
                     #region Blinking
+
                     SkinnedMeshRenderer body = null;
                     for (int i = 0; i < desc.transform.childCount; i++)
                     {
@@ -2751,8 +3015,10 @@ namespace AwAVR.VRCSDKPlus
                             break;
                         }
                     }
+
                     #endregion
                 }
+
                 #endregion
             }
 
@@ -2765,17 +3031,21 @@ namespace AwAVR.VRCSDKPlus
         {
             EditorApplication.delayCall -= ForceCallAutoLipSync;
 
-            var descriptorEditor = Type.GetType("AvatarDescriptorEditor3, Assembly-CSharp-Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null") ?? 
-                                   Type.GetType("AvatarDescriptorEditor3, VRC.SDK3A.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+            var descriptorEditor =
+                Type.GetType(
+                    "AvatarDescriptorEditor3, Assembly-CSharp-Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null") ??
+                Type.GetType(
+                    "AvatarDescriptorEditor3, VRC.SDK3A.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
 
             if (descriptorEditor == null)
             {
                 Debug.LogWarning("AvatarDescriptorEditor3 Type couldn't be found!");
                 return;
             }
-            
+
             Editor tempEditor = (Editor)Resources.FindObjectsOfTypeAll(descriptorEditor)[0];
-            descriptorEditor.GetMethod("AutoDetectLipSync", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(tempEditor, null);
+            descriptorEditor.GetMethod("AutoDetectLipSync", BindingFlags.NonPublic | BindingFlags.Instance)
+                .Invoke(tempEditor, null);
         }
 
         #endregion
@@ -2784,122 +3054,128 @@ namespace AwAVR.VRCSDKPlus
     internal static class VRCSDKPlusToolbox
     {
         #region Ready Paths
-		internal enum PathOption
-		{
-			Normal,
-			ForceFolder,
-			ForceFile
-		}
-		internal static string ReadyAssetPath(string path, bool makeUnique = false, PathOption pathOption = PathOption.Normal)
-		{
-			bool forceFolder = pathOption == PathOption.ForceFolder;
-			bool forceFile = pathOption == PathOption.ForceFile;
 
-			path = forceFile ? LegalizeName(path) : forceFolder ? LegalizePath(path) : LegalizeFullPath(path);
-			bool isFolder = forceFolder || (!forceFile && string.IsNullOrEmpty(Path.GetExtension(path)));
+        internal enum PathOption
+        {
+            Normal,
+            ForceFolder,
+            ForceFile
+        }
 
-			if (isFolder)
-			{
-				if (!Directory.Exists(path))
-				{
-					Directory.CreateDirectory(path);
-					AssetDatabase.ImportAsset(path);
-				}
-				else if (makeUnique)
-				{
-					path = AssetDatabase.GenerateUniqueAssetPath(path);
-					Directory.CreateDirectory(path);
-					AssetDatabase.ImportAsset(path);
-				}
-			}
-			else
-			{
-				const string basePath = "Assets";
-				string folderPath = Path.GetDirectoryName(path);
-				string fileName = Path.GetFileName(path);
+        internal static string ReadyAssetPath(string path, bool makeUnique = false,
+            PathOption pathOption = PathOption.Normal)
+        {
+            bool forceFolder = pathOption == PathOption.ForceFolder;
+            bool forceFile = pathOption == PathOption.ForceFile;
 
-				if (string.IsNullOrEmpty(folderPath))
-					folderPath = basePath;
-				else if (!folderPath.StartsWith(Application.dataPath) && !folderPath.StartsWith(basePath))
-					folderPath = $"{basePath}/{folderPath}";
+            path = forceFile ? LegalizeName(path) : forceFolder ? LegalizePath(path) : LegalizeFullPath(path);
+            bool isFolder = forceFolder || (!forceFile && string.IsNullOrEmpty(Path.GetExtension(path)));
 
-				if (folderPath != basePath && !Directory.Exists(folderPath))
-				{
-					Directory.CreateDirectory(folderPath);
-					AssetDatabase.ImportAsset(folderPath);
-				}
+            if (isFolder)
+            {
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                    AssetDatabase.ImportAsset(path);
+                }
+                else if (makeUnique)
+                {
+                    path = AssetDatabase.GenerateUniqueAssetPath(path);
+                    Directory.CreateDirectory(path);
+                    AssetDatabase.ImportAsset(path);
+                }
+            }
+            else
+            {
+                const string basePath = "Assets";
+                string folderPath = Path.GetDirectoryName(path);
+                string fileName = Path.GetFileName(path);
 
-				path = $"{folderPath}/{fileName}";
-				if (makeUnique)
-					path = AssetDatabase.GenerateUniqueAssetPath(path);
+                if (string.IsNullOrEmpty(folderPath))
+                    folderPath = basePath;
+                else if (!folderPath.StartsWith(Application.dataPath) && !folderPath.StartsWith(basePath))
+                    folderPath = $"{basePath}/{folderPath}";
 
-			}
+                if (folderPath != basePath && !Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                    AssetDatabase.ImportAsset(folderPath);
+                }
 
-			return path;
-		}
+                path = $"{folderPath}/{fileName}";
+                if (makeUnique)
+                    path = AssetDatabase.GenerateUniqueAssetPath(path);
+            }
 
-		internal static string ReadyAssetPath(string folderPath, string fullNameOrExtension, bool makeUnique = false)
-		{
-			if (string.IsNullOrEmpty(fullNameOrExtension))
-				return ReadyAssetPath(LegalizePath(folderPath), makeUnique, PathOption.ForceFolder);
-			if (string.IsNullOrEmpty(folderPath))
-				return ReadyAssetPath(LegalizeName(fullNameOrExtension), makeUnique, PathOption.ForceFile);
+            return path;
+        }
 
-			return ReadyAssetPath($"{LegalizePath(folderPath)}/{LegalizeName(fullNameOrExtension)}", makeUnique);
-		}
-		internal static string ReadyAssetPath(Object buddyAsset, string fullNameOrExtension = "", bool makeUnique = true)
-		{
-			var buddyPath = AssetDatabase.GetAssetPath(buddyAsset);
-			string folderPath = Path.GetDirectoryName(buddyPath);
-			if (string.IsNullOrEmpty(fullNameOrExtension))
-				fullNameOrExtension = Path.GetFileName(buddyPath);
-			if (fullNameOrExtension.StartsWith("."))
-			{
-				string assetName = string.IsNullOrWhiteSpace(buddyAsset.name) ? "SomeAsset" : buddyAsset.name;
-				fullNameOrExtension = $"{assetName}{fullNameOrExtension}";
-			}
+        internal static string ReadyAssetPath(string folderPath, string fullNameOrExtension, bool makeUnique = false)
+        {
+            if (string.IsNullOrEmpty(fullNameOrExtension))
+                return ReadyAssetPath(LegalizePath(folderPath), makeUnique, PathOption.ForceFolder);
+            if (string.IsNullOrEmpty(folderPath))
+                return ReadyAssetPath(LegalizeName(fullNameOrExtension), makeUnique, PathOption.ForceFile);
 
-			return ReadyAssetPath(folderPath, fullNameOrExtension, makeUnique);
-		}
+            return ReadyAssetPath($"{LegalizePath(folderPath)}/{LegalizeName(fullNameOrExtension)}", makeUnique);
+        }
 
-		internal static string LegalizeFullPath(string path)
-		{
-			if (string.IsNullOrEmpty(path))
-			{
-				Debug.LogWarning("Legalizing empty path! Returned path as 'EmptyPath'");
-				return "EmptyPath";
-			}
+        internal static string ReadyAssetPath(Object buddyAsset, string fullNameOrExtension = "",
+            bool makeUnique = true)
+        {
+            var buddyPath = AssetDatabase.GetAssetPath(buddyAsset);
+            string folderPath = Path.GetDirectoryName(buddyPath);
+            if (string.IsNullOrEmpty(fullNameOrExtension))
+                fullNameOrExtension = Path.GetFileName(buddyPath);
+            if (fullNameOrExtension.StartsWith("."))
+            {
+                string assetName = string.IsNullOrWhiteSpace(buddyAsset.name) ? "SomeAsset" : buddyAsset.name;
+                fullNameOrExtension = $"{assetName}{fullNameOrExtension}";
+            }
 
-			var ext = Path.GetExtension(path);
-			bool isFolder = string.IsNullOrEmpty(ext);
-			if (isFolder) return LegalizePath(path);
+            return ReadyAssetPath(folderPath, fullNameOrExtension, makeUnique);
+        }
 
-			string folderPath = Path.GetDirectoryName(path);
-			var fileName = LegalizeName(Path.GetFileNameWithoutExtension(path));
+        internal static string LegalizeFullPath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                Debug.LogWarning("Legalizing empty path! Returned path as 'EmptyPath'");
+                return "EmptyPath";
+            }
 
-			if (string.IsNullOrEmpty(folderPath)) return $"{fileName}{ext}";
-			folderPath = LegalizePath(folderPath);
+            var ext = Path.GetExtension(path);
+            bool isFolder = string.IsNullOrEmpty(ext);
+            if (isFolder) return LegalizePath(path);
 
-			return $"{folderPath}/{fileName}{ext}";
-		}
-		internal static string LegalizePath(string path)
-		{
-			string regexFolderReplace = Regex.Escape(new string(Path.GetInvalidPathChars()));
+            string folderPath = Path.GetDirectoryName(path);
+            var fileName = LegalizeName(Path.GetFileNameWithoutExtension(path));
 
-			path = path.Replace('\\', '/');
-			if (path.IndexOf('/') > 0)
-				path = string.Join("/", path.Split('/').Select(s => Regex.Replace(s, $@"[{regexFolderReplace}]", "-")));
+            if (string.IsNullOrEmpty(folderPath)) return $"{fileName}{ext}";
+            folderPath = LegalizePath(folderPath);
 
-			return path;
+            return $"{folderPath}/{fileName}{ext}";
+        }
 
-		}
-		internal static string LegalizeName(string name)
-		{
-			string regexFileReplace = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
-			return string.IsNullOrEmpty(name) ? "Unnamed" : Regex.Replace(name, $@"[{regexFileReplace}]", "-");
-		}
-		#endregion
-        
+        internal static string LegalizePath(string path)
+        {
+            string regexFolderReplace = Regex.Escape(new string(Path.GetInvalidPathChars()));
+
+            path = path.Replace('\\', '/');
+            if (path.IndexOf('/') > 0)
+                path = string.Join("/", path.Split('/').Select(s => Regex.Replace(s, $@"[{regexFolderReplace}]", "-")));
+
+            return path;
+        }
+
+        internal static string LegalizeName(string name)
+        {
+            string regexFileReplace = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+            return string.IsNullOrEmpty(name) ? "Unnamed" : Regex.Replace(name, $@"[{regexFileReplace}]", "-");
+        }
+
+        #endregion
+
         internal static bool TryGetActiveIndex(this ReorderableList orderList, out int index)
         {
             index = orderList.index;
@@ -2907,7 +3183,9 @@ namespace AwAVR.VRCSDKPlus
             index = -1;
             return false;
         }
-        public static string GenerateUniqueString(string s, Func<string, bool> PassCondition, bool addNumberIfMissing = true)
+
+        public static string GenerateUniqueString(string s, Func<string, bool> PassCondition,
+            bool addNumberIfMissing = true)
         {
             if (PassCondition(s)) return s;
             var match = Regex.Match(s, @"(?=.*)(\d+)$");
@@ -2915,11 +3193,12 @@ namespace AwAVR.VRCSDKPlus
             var numberString = match.Success ? match.Groups[1].Value : "1";
             if (!match.Success && !s.EndsWith(" ")) s += " ";
             var newString = Regex.Replace(s, @"(?=.*?)\d+$", string.Empty);
-            while (!PassCondition($"{newString}{numberString}")) 
+            while (!PassCondition($"{newString}{numberString}"))
                 numberString = (int.Parse(numberString) + 1).ToString(new string('0', numberString.Length));
-            
+
             return $"{newString}{numberString}";
         }
+
         public static class Container
         {
             public class Vertical : IDisposable
@@ -2936,6 +3215,7 @@ namespace AwAVR.VRCSDKPlus
 
                 public void Dispose() => EditorGUILayout.EndVertical();
             }
+
             public class Horizontal : IDisposable
             {
                 public Horizontal(params GUILayoutOption[] options)
@@ -2960,6 +3240,7 @@ namespace AwAVR.VRCSDKPlus
 
                 EditorGUILayout.LabelField(title, VRCSDKPlusToolbox.Styles.Label.Centered);
             }
+
             public static void EndLayout() => EditorGUILayout.EndVertical();
 
             public static Rect GUIBox(float height)
@@ -2983,7 +3264,6 @@ namespace AwAVR.VRCSDKPlus
 
         public static class Placeholder
         {
-
             public static void GUILayout(float height) =>
                 GUI(EditorGUILayout.GetControlRect(false, height));
 
@@ -3002,11 +3282,11 @@ namespace AwAVR.VRCSDKPlus
             public static class Label
             {
                 internal static readonly UnityEngine.GUIStyle Centered
-                    = new UnityEngine.GUIStyle(GUI.skin.label) {alignment = TextAnchor.MiddleCenter};
+                    = new UnityEngine.GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
 
                 internal static readonly UnityEngine.GUIStyle RichText
-                    = new UnityEngine.GUIStyle(GUI.skin.label) {richText = true};
-                
+                    = new UnityEngine.GUIStyle(GUI.skin.label) { richText = true };
+
 
                 internal static readonly UnityEngine.GUIStyle Type
                     = new UnityEngine.GUIStyle(GUI.skin.label)
@@ -3026,7 +3306,9 @@ namespace AwAVR.VRCSDKPlus
                         alignment = TextAnchor.MiddleLeft,
                         contentOffset = new Vector2(2.5f, 0)
                     };
-                internal static readonly GUIStyle faintLinkLabel = new GUIStyle(PlaceHolder) { name = "Toggle", hover = { textColor = new Color(0.3f, 0.7f, 1) } };
+
+                internal static readonly GUIStyle faintLinkLabel = new GUIStyle(PlaceHolder)
+                    { name = "Toggle", hover = { textColor = new Color(0.3f, 0.7f, 1) } };
 
                 internal static readonly UnityEngine.GUIStyle TypeFocused
                     = new UnityEngine.GUIStyle(GUI.skin.label)
@@ -3039,13 +3321,17 @@ namespace AwAVR.VRCSDKPlus
                         fontStyle = FontStyle.Italic,
                     };
 
-                internal static readonly GUIStyle TypeLabel = new GUIStyle(PlaceHolder) {contentOffset = new Vector2(-2.5f, 0)};
-                internal static readonly GUIStyle RightPlaceHolder = new GUIStyle(TypeLabel) {alignment = TextAnchor.MiddleRight};
+                internal static readonly GUIStyle TypeLabel = new GUIStyle(PlaceHolder)
+                    { contentOffset = new Vector2(-2.5f, 0) };
+
+                internal static readonly GUIStyle RightPlaceHolder = new GUIStyle(TypeLabel)
+                    { alignment = TextAnchor.MiddleRight };
+
                 internal static readonly UnityEngine.GUIStyle Watermark
                     = new UnityEngine.GUIStyle(PlaceHolder)
                     {
                         alignment = TextAnchor.MiddleRight,
-                        fontSize  = 10,
+                        fontSize = 10,
                     };
 
                 internal static readonly UnityEngine.GUIStyle LabelDropdown
@@ -3057,13 +3343,13 @@ namespace AwAVR.VRCSDKPlus
 
                 internal static readonly UnityEngine.GUIStyle RemoveIcon
                     = new UnityEngine.GUIStyle(GUI.skin.GetStyle("RL FooterButton"));
-
             }
 
-            internal static readonly GUIStyle icon = new GUIStyle(GUI.skin.label) {fixedWidth = 18, fixedHeight = 18};
-            internal static readonly UnityEngine.GUIStyle letterButton = 
-                new UnityEngine.GUIStyle(GUI.skin.button) { padding = new RectOffset(), margin = new RectOffset(1,1,1,1), richText = true};
+            internal static readonly GUIStyle icon = new GUIStyle(GUI.skin.label) { fixedWidth = 18, fixedHeight = 18 };
 
+            internal static readonly UnityEngine.GUIStyle letterButton =
+                new UnityEngine.GUIStyle(GUI.skin.button)
+                    { padding = new RectOffset(), margin = new RectOffset(1, 1, 1, 1), richText = true };
         }
 
         public static class Strings
@@ -3088,8 +3374,11 @@ namespace AwAVR.VRCSDKPlus
 
         public static class GUIContent
         {
-            public const string MissingParametersTooltip = "No Expression Parameters targeted. Auto-fill and warnings are disabled.";
+            public const string MissingParametersTooltip =
+                "No Expression Parameters targeted. Auto-fill and warnings are disabled.";
+
             public const string MenuFullTooltip = "Menu's controls are already maxed out. (8/8)";
+
             public static readonly UnityEngine.GUIContent Copy
                 = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(VRCSDKPlusToolbox.Strings.IconCopy))
                 {
@@ -3107,6 +3396,7 @@ namespace AwAVR.VRCSDKPlus
                 {
                     tooltip = "Move"
                 };
+
             public static readonly UnityEngine.GUIContent Place
                 = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(VRCSDKPlusToolbox.Strings.IconPlace))
                 {
@@ -3124,6 +3414,7 @@ namespace AwAVR.VRCSDKPlus
 
             public static readonly UnityEngine.GUIContent Warn
                 = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(VRCSDKPlusToolbox.Strings.IconWarn));
+
             public static readonly UnityEngine.GUIContent Error
                 = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(VRCSDKPlusToolbox.Strings.IconError));
 
@@ -3140,12 +3431,14 @@ namespace AwAVR.VRCSDKPlus
                 };
 
             public static readonly UnityEngine.GUIContent Remove
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(VRCSDKPlusToolbox.Strings.IconRemove)) {tooltip = "Remove element from list"};
+                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(VRCSDKPlusToolbox.Strings.IconRemove))
+                    { tooltip = "Remove parameter from list" };
 
             public static readonly UnityEngine.GUIContent Search
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(VRCSDKPlusToolbox.Strings.IconSearch)) {tooltip = "Search"};
+                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(VRCSDKPlusToolbox.Strings.IconSearch))
+                    { tooltip = "Search" };
         }
-        
+
         public static class Preferences
         {
             public static bool CompactMode
@@ -3160,7 +3453,10 @@ namespace AwAVR.VRCSDKPlus
             if (brightness > 1) brightness /= 255;
             return new Color(brightness, brightness, brightness, 1);
         }
-        private static readonly Texture2D tempTexture = new Texture2D(1, 1) { anisoLevel = 0, filterMode = FilterMode.Point };
+
+        private static readonly Texture2D tempTexture = new Texture2D(1, 1)
+            { anisoLevel = 0, filterMode = FilterMode.Point };
+
         internal static Texture2D GetColorTexture(float rgb, float a = 1)
             => GetColorTexture(rgb, rgb, rgb, a);
 
@@ -3173,6 +3469,7 @@ namespace AwAVR.VRCSDKPlus
 
             return GetColorTexture(new Color(r, g, b, a));
         }
+
         internal static Texture2D GetColorTexture(Color color)
         {
             tempTexture.SetPixel(0, 0, color);
@@ -3237,13 +3534,19 @@ namespace AwAVR.VRCSDKPlus
 
             return -1;
         }
-        internal static bool GetPlayableLayer(this VRCAvatarDescriptor avi, VRCAvatarDescriptor.AnimLayerType type, out AnimatorController controller)
+
+        internal static bool GetPlayableLayer(this VRCAvatarDescriptor avi, VRCAvatarDescriptor.AnimLayerType type,
+            out AnimatorController controller)
         {
-            controller = (from l in avi.baseAnimationLayers.Concat(avi.specialAnimationLayers) where l.type == type select l.animatorController).FirstOrDefault() as AnimatorController;
+            controller =
+                (from l in avi.baseAnimationLayers.Concat(avi.specialAnimationLayers)
+                    where l.type == type
+                    select l.animatorController).FirstOrDefault() as AnimatorController;
             return controller != null;
         }
 
-        internal static bool IterateArray(this SerializedProperty property, Func<int, SerializedProperty, bool> func, params int[] skipIndex)
+        internal static bool IterateArray(this SerializedProperty property, Func<int, SerializedProperty, bool> func,
+            params int[] skipIndex)
         {
             for (int i = property.arraySize - 1; i >= 0; i--)
             {
@@ -3252,10 +3555,12 @@ namespace AwAVR.VRCSDKPlus
                 if (func(i, property.GetArrayElementAtIndex(i)))
                     return true;
             }
+
             return false;
         }
 
         #region Keyboard Commands
+
         internal enum EventCommands
         {
             Copy,
@@ -3270,9 +3575,12 @@ namespace AwAVR.VRCSDKPlus
             FrameSelectedWithLock,
             FocusProjectWindow
         }
-        internal static bool HasReceivedCommand(EventCommands command, string matchFocusControl = "", bool useEvent = true)
+
+        internal static bool HasReceivedCommand(EventCommands command, string matchFocusControl = "",
+            bool useEvent = true)
         {
-            if (!string.IsNullOrEmpty(matchFocusControl) && GUI.GetNameOfFocusedControl() != matchFocusControl) return false;
+            if (!string.IsNullOrEmpty(matchFocusControl) && GUI.GetNameOfFocusedControl() != matchFocusControl)
+                return false;
             Event e = Event.current;
             if (e.type != EventType.ValidateCommand) return false;
             bool received = command.ToString() == e.commandName;
@@ -3282,17 +3590,28 @@ namespace AwAVR.VRCSDKPlus
 
         internal static bool HasReceivedKey(KeyCode key, string matchFocusControl = "", bool useEvent = true)
         {
-            if (!string.IsNullOrEmpty(matchFocusControl) && GUI.GetNameOfFocusedControl() != matchFocusControl) return false;
+            if (!string.IsNullOrEmpty(matchFocusControl) && GUI.GetNameOfFocusedControl() != matchFocusControl)
+                return false;
             Event e = Event.current;
             bool received = e.type == EventType.KeyDown && e.keyCode == key;
             if (received && useEvent) e.Use();
             return received;
         }
 
-        internal static bool HasReceivedEnter(string matchFocusControl = "",bool useEvent = true) => HasReceivedKey(KeyCode.Return, matchFocusControl, useEvent) || HasReceivedKey(KeyCode.KeypadEnter, matchFocusControl, useEvent);
-        internal static bool HasReceivedCancel(string matchFocusControl = "",  bool useEvent = true) => HasReceivedKey(KeyCode.Escape, matchFocusControl, useEvent);
-        internal static bool HasReceivedAnyDelete(string matchFocusControl = "", bool useEvent = true) => HasReceivedCommand(EventCommands.SoftDelete, matchFocusControl, useEvent) || HasReceivedCommand(EventCommands.Delete, matchFocusControl, useEvent) || HasReceivedKey(KeyCode.Delete, matchFocusControl, useEvent);
-        internal static bool HandleConfirmEvents(string matchFocusControl = "", Action onConfirm = null, Action onCancel = null)
+        internal static bool HasReceivedEnter(string matchFocusControl = "", bool useEvent = true) =>
+            HasReceivedKey(KeyCode.Return, matchFocusControl, useEvent) ||
+            HasReceivedKey(KeyCode.KeypadEnter, matchFocusControl, useEvent);
+
+        internal static bool HasReceivedCancel(string matchFocusControl = "", bool useEvent = true) =>
+            HasReceivedKey(KeyCode.Escape, matchFocusControl, useEvent);
+
+        internal static bool HasReceivedAnyDelete(string matchFocusControl = "", bool useEvent = true) =>
+            HasReceivedCommand(EventCommands.SoftDelete, matchFocusControl, useEvent) ||
+            HasReceivedCommand(EventCommands.Delete, matchFocusControl, useEvent) ||
+            HasReceivedKey(KeyCode.Delete, matchFocusControl, useEvent);
+
+        internal static bool HandleConfirmEvents(string matchFocusControl = "", Action onConfirm = null,
+            Action onCancel = null)
         {
             if (HasReceivedEnter(matchFocusControl))
             {
@@ -3305,15 +3624,18 @@ namespace AwAVR.VRCSDKPlus
                 onCancel?.Invoke();
                 return true;
             }
+
             return false;
         }
 
-        internal static bool HandleTextFocusConfirmCommands(string matchFocusControl, Action onConfirm = null, Action onCancel = null)
+        internal static bool HandleTextFocusConfirmCommands(string matchFocusControl, Action onConfirm = null,
+            Action onCancel = null)
         {
             if (!HandleConfirmEvents(matchFocusControl, onConfirm, onCancel)) return false;
             GUI.FocusControl(null);
             return true;
         }
+
         #endregion
 
         internal abstract class CustomDropdownBase : PopupWindowContent
@@ -3329,11 +3651,10 @@ namespace AwAVR.VRCSDKPlus
                 alignment = TextAnchor.MiddleCenter,
                 fontStyle = FontStyle.Bold
             };
-
         }
+
         internal class CustomDropdown<T> : CustomDropdownBase
         {
-
             private readonly string title;
             private string search;
             internal DropDownItem[] items;
@@ -3347,7 +3668,8 @@ namespace AwAVR.VRCSDKPlus
             private Vector2 scroll;
             private readonly Rect[] selectionRects;
 
-            public CustomDropdown(string title, IEnumerable<T> itemArray, Action<DropDownItem> itemGUI, Action<int, T> onSelected)
+            public CustomDropdown(string title, IEnumerable<T> itemArray, Action<DropDownItem> itemGUI,
+                Action<int, T> onSelected)
             {
                 this.title = title;
                 this.onSelected = onSelected;
@@ -3375,7 +3697,6 @@ namespace AwAVR.VRCSDKPlus
 
             public override void OnGUI(Rect rect)
             {
-
                 using (new GUILayout.AreaScope(rect))
                 {
                     var e = Event.current;
@@ -3385,6 +3706,7 @@ namespace AwAVR.VRCSDKPlus
                         GUILayout.Label(title, titleStyle);
                         DrawSeparator();
                     }
+
                     if (hasSearch)
                     {
                         EditorGUI.BeginChangeCheck();
@@ -3410,6 +3732,7 @@ namespace AwAVR.VRCSDKPlus
                                 editorWindow.Close();
                             }
                         }
+
                         using (new GUILayout.VerticalScope()) itemGUI(item);
 
                         if (t == EventType.Repaint)
@@ -3426,6 +3749,7 @@ namespace AwAVR.VRCSDKPlus
                         firstPass = false;
                         GUI.FocusControl($"{title}SearchBar");
                     }
+
                     GUILayout.EndScrollView();
                     if (rect.Contains(e.mousePosition))
                         editorWindow.Repaint();
@@ -3440,6 +3764,7 @@ namespace AwAVR.VRCSDKPlus
             }
 
             public void Show(Rect position) => PopupWindow.Show(position, this);
+
             internal class DropDownItem
             {
                 internal readonly int itemIndex;
@@ -3470,14 +3795,10 @@ namespace AwAVR.VRCSDKPlus
                 r.y += padding / 2f;
                 r.x -= 2;
                 r.width += 6;
-                ColorUtility.TryParseHtmlString(EditorGUIUtility.isProSkin ? "#595959" : "#858585", out Color lineColor);
+                ColorUtility.TryParseHtmlString(EditorGUIUtility.isProSkin ? "#595959" : "#858585",
+                    out Color lineColor);
                 EditorGUI.DrawRect(r, lineColor);
             }
-
         }
-
     }
-
-
-
 }
