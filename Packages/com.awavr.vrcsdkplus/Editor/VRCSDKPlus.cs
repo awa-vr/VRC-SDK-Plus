@@ -495,6 +495,25 @@ namespace AwAVR.VRCSDKPlus
 
                     if (hasWarning) GUI.Label(warnRect, new GUIContent(yellowWarnIcon) { tooltip = warnMsg });
 
+#if PARAMETER_RENAMER_INSTALLED
+                    if (!hasWarning)
+                    {
+                        var editIcon = new GUIContent(EditorGUIUtility.IconContent("d_editicon.sml"));
+                        if (GUI.Button(warnRect, new GUIContent(editIcon), EditorStyles.label))
+                        {
+                            try
+                            {
+                                ParameterRenamer.Show(name.stringValue, avatar);
+                            }
+                            catch (Exception exception)
+                            {
+                                Console.WriteLine(exception);
+                                throw;
+                            }
+                        }
+                    }
+#endif
+
                     switch (valueType.enumValueIndex)
                     {
                         case 2:
@@ -1090,11 +1109,13 @@ namespace AwAVR.VRCSDKPlus
                 DrawHistory();
                 DrawHead();
                 DrawBody();
-                DrawFooter();
                 serializedObject.ApplyModifiedProperties();
             }
 
-            private void OnEnable() => ReInitializeAll();
+            private void OnEnable()
+            {
+                ReInitializeAll();
+            }
 
             private void DrawHistory()
             {
@@ -1226,16 +1247,6 @@ namespace AwAVR.VRCSDKPlus
                     ControlRenderer.DrawControlCompact(control, expressionParameters);
                 else
                     ControlRenderer.DrawControl(control, expressionParameters);
-            }
-
-            void DrawFooter()
-            {
-                using (new GUILayout.HorizontalScope())
-                {
-                    GUILayout.FlexibleSpace();
-                    GUILayout.Label("Editor by", VRCSDKPlusToolbox.Styles.Label.Watermark);
-                    Link("@awavr", "https://github.com/awa-vr");
-                }
             }
 
             private void HandleControlEvents()
@@ -1485,12 +1496,16 @@ namespace AwAVR.VRCSDKPlus
                                 SubMenuContainer(property);
                                 break;
                             case VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet:
-                                CompactTwoAxisParametersContainer(property, parameters);
-                                //AxisCustomisationContainer(property);
+                                // CompactTwoAxisParametersContainer(property, parameters);
+                                TwoAxisParametersContainer(property, parameters);
+                                EditorGUILayout.Separator();
+                                AxisCustomisationContainer(property);
                                 break;
                             case VRCExpressionsMenu.Control.ControlType.FourAxisPuppet:
-                                CompactFourAxisParametersContainer(property, parameters);
-                                //AxisCustomisationContainer(property);
+                                // CompactFourAxisParametersContainer(property, parameters);
+                                FourAxisParametersContainer(property, parameters);
+                                EditorGUILayout.Separator();
+                                AxisCustomisationContainer(property);
                                 break;
                         }
                     }
@@ -2086,7 +2101,7 @@ namespace AwAVR.VRCSDKPlus
                             };
                             warnRect = new Rect(addRect) { x = addRect.x + addRect.width, width = CONTENT_WARN_WIDTH };
                         }
-                        else if (!targetParameters || options.required && isEmpty)
+                        else if (!targetParameters || options.required && isEmpty || true)
                         {
                             textfieldRect.width -= CONTENT_WARN_WIDTH;
                             dropdownRect.x -= CONTENT_WARN_WIDTH;
@@ -2108,6 +2123,25 @@ namespace AwAVR.VRCSDKPlus
                         if (willWarn)
                             GUI.Label(warnRect,
                                 new GUIContent(VRCSDKPlusToolbox.GUIContent.Warn) { tooltip = warnMsg });
+
+#if PARAMETER_RENAMER_INSTALLED
+                        if (!willWarn)
+                        {
+                            var editIcon = new GUIContent(EditorGUIUtility.IconContent("d_editicon.sml"));
+                            if (GUI.Button(warnRect, new GUIContent(editIcon), EditorStyles.label))
+                            {
+                                try
+                                {
+                                    ParameterRenamer.Show(name.stringValue, avatar);
+                                }
+                                catch (Exception exception)
+                                {
+                                    Console.WriteLine(exception);
+                                    throw;
+                                }
+                            }
+                        }
+#endif
 
                         if (isMissing)
                         {
@@ -2207,7 +2241,6 @@ namespace AwAVR.VRCSDKPlus
                                         p.name == parameterName.stringValue);
 
                                     // Check what type the parameter is
-
                                     var value = property.FindPropertyRelative("value");
                                     switch (param?.valueType)
                                     {
