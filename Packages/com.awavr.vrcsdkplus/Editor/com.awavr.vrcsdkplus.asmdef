@@ -2,7 +2,8 @@
     "name": "com.awavr.vrcsdkplus",
     "rootNamespace": "",
     "references": [
-        "com.awavr.parameterrenamer.Editor"
+        "com.awavr.parameterrenamer.Editor",
+        "com.awavr.core.Editor"
     ],
     "includePlatforms": [
         "Editor"
