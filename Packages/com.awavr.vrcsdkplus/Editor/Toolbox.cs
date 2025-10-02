@@ -12,44 +12,36 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 using AnimatorController = UnityEditor.Animations.AnimatorController;
 using Object = UnityEngine.Object;
 
-namespace AwAVR.VRCSDKPlus
-{
-    internal static class Toolbox
-    {
+namespace AwAVR.VRCSDKPlus {
+    internal static class Toolbox {
         #region Ready Paths
 
-        internal enum PathOption
-        {
+        internal enum PathOption {
             Normal,
             ForceFolder,
             ForceFile
         }
 
         internal static string ReadyAssetPath(string path, bool makeUnique = false,
-            PathOption pathOption = PathOption.Normal)
-        {
+            PathOption pathOption = PathOption.Normal) {
             bool forceFolder = pathOption == PathOption.ForceFolder;
             bool forceFile = pathOption == PathOption.ForceFile;
 
             path = forceFile ? LegalizeName(path) : forceFolder ? LegalizePath(path) : LegalizeFullPath(path);
             bool isFolder = forceFolder || (!forceFile && string.IsNullOrEmpty(Path.GetExtension(path)));
 
-            if (isFolder)
-            {
-                if (!Directory.Exists(path))
-                {
+            if (isFolder) {
+                if (!Directory.Exists(path)) {
                     Directory.CreateDirectory(path);
                     AssetDatabase.ImportAsset(path);
                 }
-                else if (makeUnique)
-                {
+                else if (makeUnique) {
                     path = AssetDatabase.GenerateUniqueAssetPath(path);
                     Directory.CreateDirectory(path);
                     AssetDatabase.ImportAsset(path);
                 }
             }
-            else
-            {
+            else {
                 const string basePath = "Assets";
                 string folderPath = Path.GetDirectoryName(path);
                 string fileName = Path.GetFileName(path);
@@ -59,8 +51,7 @@ namespace AwAVR.VRCSDKPlus
                 else if (!folderPath.StartsWith(Application.dataPath) && !folderPath.StartsWith(basePath))
                     folderPath = $"{basePath}/{folderPath}";
 
-                if (folderPath != basePath && !Directory.Exists(folderPath))
-                {
+                if (folderPath != basePath && !Directory.Exists(folderPath)) {
                     Directory.CreateDirectory(folderPath);
                     AssetDatabase.ImportAsset(folderPath);
                 }
@@ -73,8 +64,7 @@ namespace AwAVR.VRCSDKPlus
             return path;
         }
 
-        internal static string ReadyAssetPath(string folderPath, string fullNameOrExtension, bool makeUnique = false)
-        {
+        internal static string ReadyAssetPath(string folderPath, string fullNameOrExtension, bool makeUnique = false) {
             if (string.IsNullOrEmpty(fullNameOrExtension))
                 return ReadyAssetPath(LegalizePath(folderPath), makeUnique, PathOption.ForceFolder);
             if (string.IsNullOrEmpty(folderPath))
@@ -84,14 +74,12 @@ namespace AwAVR.VRCSDKPlus
         }
 
         internal static string ReadyAssetPath(Object buddyAsset, string fullNameOrExtension = "",
-            bool makeUnique = true)
-        {
+            bool makeUnique = true) {
             var buddyPath = AssetDatabase.GetAssetPath(buddyAsset);
             string folderPath = Path.GetDirectoryName(buddyPath);
             if (string.IsNullOrEmpty(fullNameOrExtension))
                 fullNameOrExtension = Path.GetFileName(buddyPath);
-            if (fullNameOrExtension.StartsWith("."))
-            {
+            if (fullNameOrExtension.StartsWith(".")) {
                 string assetName = string.IsNullOrWhiteSpace(buddyAsset.name) ? "SomeAsset" : buddyAsset.name;
                 fullNameOrExtension = $"{assetName}{fullNameOrExtension}";
             }
@@ -99,10 +87,8 @@ namespace AwAVR.VRCSDKPlus
             return ReadyAssetPath(folderPath, fullNameOrExtension, makeUnique);
         }
 
-        internal static string LegalizeFullPath(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-            {
+        internal static string LegalizeFullPath(string path) {
+            if (string.IsNullOrEmpty(path)) {
                 Debug.LogWarning("Legalizing empty path! Returned path as 'EmptyPath'");
                 return "EmptyPath";
             }
@@ -120,8 +106,7 @@ namespace AwAVR.VRCSDKPlus
             return $"{folderPath}/{fileName}{ext}";
         }
 
-        internal static string LegalizePath(string path)
-        {
+        internal static string LegalizePath(string path) {
             string regexFolderReplace = Regex.Escape(new string(Path.GetInvalidPathChars()));
 
             path = path.Replace('\\', '/');
@@ -131,16 +116,14 @@ namespace AwAVR.VRCSDKPlus
             return path;
         }
 
-        internal static string LegalizeName(string name)
-        {
+        internal static string LegalizeName(string name) {
             string regexFileReplace = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
             return string.IsNullOrEmpty(name) ? "Unnamed" : Regex.Replace(name, $@"[{regexFileReplace}]", "-");
         }
 
         #endregion
 
-        internal static bool TryGetActiveIndex(this ReorderableList orderList, out int index)
-        {
+        internal static bool TryGetActiveIndex(this ReorderableList orderList, out int index) {
             index = orderList.index;
             if (index < orderList.count && index >= 0) return true;
             index = -1;
@@ -148,8 +131,7 @@ namespace AwAVR.VRCSDKPlus
         }
 
         public static string GenerateUniqueString(string s, Func<string, bool> PassCondition,
-            bool addNumberIfMissing = true)
-        {
+            bool addNumberIfMissing = true) {
             if (PassCondition(s)) return s;
             var match = Regex.Match(s, @"(?=.*)(\d+)$");
             if (!match.Success && !addNumberIfMissing) return s;
@@ -162,15 +144,12 @@ namespace AwAVR.VRCSDKPlus
             return $"{newString}{numberString}";
         }
 
-        public static class Container
-        {
-            public class Vertical : IDisposable
-            {
+        public static class Container {
+            public class Vertical : IDisposable {
                 public Vertical(params GUILayoutOption[] options)
                     => EditorGUILayout.BeginVertical(GUI.skin.GetStyle("helpbox"), options);
 
-                public Vertical(string title, params GUILayoutOption[] options)
-                {
+                public Vertical(string title, params GUILayoutOption[] options) {
                     EditorGUILayout.BeginVertical(GUI.skin.GetStyle("helpbox"), options);
 
                     EditorGUILayout.LabelField(title, Toolbox.Styles.Label.Centered);
@@ -179,13 +158,11 @@ namespace AwAVR.VRCSDKPlus
                 public void Dispose() => EditorGUILayout.EndVertical();
             }
 
-            public class Horizontal : IDisposable
-            {
+            public class Horizontal : IDisposable {
                 public Horizontal(params GUILayoutOption[] options)
                     => EditorGUILayout.BeginHorizontal(GUI.skin.GetStyle("helpbox"), options);
 
-                public Horizontal(string title, params GUILayoutOption[] options)
-                {
+                public Horizontal(string title, params GUILayoutOption[] options) {
                     EditorGUILayout.BeginHorizontal(GUI.skin.GetStyle("helpbox"), options);
 
                     EditorGUILayout.LabelField(title, Toolbox.Styles.Label.Centered);
@@ -197,8 +174,7 @@ namespace AwAVR.VRCSDKPlus
             public static void BeginLayout(params GUILayoutOption[] options)
                 => EditorGUILayout.BeginVertical(GUI.skin.GetStyle("helpbox"), options);
 
-            public static void BeginLayout(string title, params GUILayoutOption[] options)
-            {
+            public static void BeginLayout(string title, params GUILayoutOption[] options) {
                 EditorGUILayout.BeginVertical(GUI.skin.GetStyle("helpbox"), options);
 
                 EditorGUILayout.LabelField(title, Toolbox.Styles.Label.Centered);
@@ -206,14 +182,12 @@ namespace AwAVR.VRCSDKPlus
 
             public static void EndLayout() => EditorGUILayout.EndVertical();
 
-            public static Rect GUIBox(float height)
-            {
+            public static Rect GUIBox(float height) {
                 var rect = EditorGUILayout.GetControlRect(false, height);
                 return GUIBox(ref rect);
             }
 
-            public static Rect GUIBox(ref Rect rect)
-            {
+            public static Rect GUIBox(ref Rect rect) {
                 GUI.Box(rect, "", GUI.skin.GetStyle("helpbox"));
 
                 rect.x += 4;
@@ -225,25 +199,21 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        public static class Placeholder
-        {
+        public static class Placeholder {
             public static void GUILayout(float height) =>
                 GUI(EditorGUILayout.GetControlRect(false, height));
 
             public static void GUI(Rect rect) => GUI(rect, EditorGUIUtility.isProSkin ? 53 : 182);
 
-            private static void GUI(Rect rect, float color)
-            {
+            private static void GUI(Rect rect, float color) {
                 EditorGUI.DrawTextureTransparent(rect, GetColorTexture(color));
             }
         }
 
-        public static class Styles
-        {
+        public static class Styles {
             public const float Padding = 3;
 
-            public static class Label
-            {
+            public static class Label {
                 internal static readonly UnityEngine.GUIStyle Centered
                     = new UnityEngine.GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
 
@@ -252,19 +222,16 @@ namespace AwAVR.VRCSDKPlus
 
 
                 internal static readonly UnityEngine.GUIStyle Type
-                    = new UnityEngine.GUIStyle(GUI.skin.label)
-                    {
+                    = new UnityEngine.GUIStyle(GUI.skin.label) {
                         alignment = TextAnchor.MiddleRight,
-                        normal =
-                        {
+                        normal = {
                             textColor = EditorGUIUtility.isProSkin ? Color.gray : BrightnessToColor(91),
                         },
                         fontStyle = FontStyle.Italic,
                     };
 
                 internal static readonly UnityEngine.GUIStyle PlaceHolder
-                    = new UnityEngine.GUIStyle(Type)
-                    {
+                    = new UnityEngine.GUIStyle(Type) {
                         fontSize = 11,
                         alignment = TextAnchor.MiddleLeft,
                         contentOffset = new Vector2(2.5f, 0)
@@ -274,11 +241,9 @@ namespace AwAVR.VRCSDKPlus
                     { name = "Toggle", hover = { textColor = new Color(0.3f, 0.7f, 1) } };
 
                 internal static readonly UnityEngine.GUIStyle TypeFocused
-                    = new UnityEngine.GUIStyle(GUI.skin.label)
-                    {
+                    = new UnityEngine.GUIStyle(GUI.skin.label) {
                         alignment = TextAnchor.MiddleRight,
-                        normal =
-                        {
+                        normal = {
                             textColor = EditorGUIUtility.isProSkin ? Color.white : Color.black,
                         },
                         fontStyle = FontStyle.Italic,
@@ -291,15 +256,13 @@ namespace AwAVR.VRCSDKPlus
                     { alignment = TextAnchor.MiddleRight };
 
                 internal static readonly UnityEngine.GUIStyle Watermark
-                    = new UnityEngine.GUIStyle(PlaceHolder)
-                    {
+                    = new UnityEngine.GUIStyle(PlaceHolder) {
                         alignment = TextAnchor.MiddleRight,
                         fontSize = 10,
                     };
 
                 internal static readonly UnityEngine.GUIStyle LabelDropdown
-                    = new UnityEngine.GUIStyle(GUI.skin.GetStyle("DropDownButton"))
-                    {
+                    = new UnityEngine.GUIStyle(GUI.skin.GetStyle("DropDownButton")) {
                         alignment = TextAnchor.MiddleLeft,
                         contentOffset = new Vector2(2.5f, 0)
                     };
@@ -315,8 +278,7 @@ namespace AwAVR.VRCSDKPlus
                     { padding = new RectOffset(), margin = new RectOffset(1, 1, 1, 1), richText = true };
         }
 
-        public static class Strings
-        {
+        public static class Strings {
             public const string IconCopy = "SaveActive";
             public const string IconPaste = "Clipboard";
             public const string IconMove = "MoveTool";
@@ -335,40 +297,34 @@ namespace AwAVR.VRCSDKPlus
             public const string SettingsCompact = "VSP_Compact";
         }
 
-        public static class GUIContent
-        {
+        public static class GUIContent {
             public const string MissingParametersTooltip =
                 "No Expression Parameters targeted. Auto-fill and warnings are disabled.";
 
             public const string MenuFullTooltip = "Menu's controls are already maxed out. (8/8)";
 
             public static readonly UnityEngine.GUIContent Copy
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconCopy))
-                {
+                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconCopy)) {
                     tooltip = "Copy"
                 };
 
             public static readonly UnityEngine.GUIContent Paste
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconPaste))
-                {
+                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconPaste)) {
                     tooltip = "Paste"
                 };
 
             public static readonly UnityEngine.GUIContent Move
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconMove))
-                {
+                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconMove)) {
                     tooltip = "Move"
                 };
 
             public static readonly UnityEngine.GUIContent Place
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconPlace))
-                {
+                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconPlace)) {
                     tooltip = "Place"
                 };
 
             public static readonly UnityEngine.GUIContent Duplicate
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconDuplicate))
-                {
+                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconDuplicate)) {
                     tooltip = "Duplicate"
                 };
 
@@ -382,14 +338,12 @@ namespace AwAVR.VRCSDKPlus
                 = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconError));
 
             public static readonly UnityEngine.GUIContent Clear
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconClear))
-                {
+                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconClear)) {
                     tooltip = "Clear"
                 };
 
             public static readonly UnityEngine.GUIContent Folder
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconFolder))
-                {
+                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconFolder)) {
                     tooltip = "Open"
                 };
 
@@ -402,17 +356,14 @@ namespace AwAVR.VRCSDKPlus
                     { tooltip = "Search" };
         }
 
-        public static class Preferences
-        {
-            public static bool CompactMode
-            {
+        public static class Preferences {
+            public static bool CompactMode {
                 get => EditorPrefs.GetBool(Toolbox.Strings.SettingsCompact, false);
                 set => EditorPrefs.SetBool(Toolbox.Strings.SettingsCompact, value);
             }
         }
 
-        public static Color BrightnessToColor(float brightness)
-        {
+        public static Color BrightnessToColor(float brightness) {
             if (brightness > 1) brightness /= 255;
             return new Color(brightness, brightness, brightness, 1);
         }
@@ -423,8 +374,7 @@ namespace AwAVR.VRCSDKPlus
         internal static Texture2D GetColorTexture(float rgb, float a = 1)
             => GetColorTexture(rgb, rgb, rgb, a);
 
-        internal static Texture2D GetColorTexture(float r, float g, float b, float a = 1)
-        {
+        internal static Texture2D GetColorTexture(float r, float g, float b, float a = 1) {
             if (r > 1) r /= 255;
             if (g > 1) g /= 255;
             if (b > 1) b /= 255;
@@ -433,19 +383,16 @@ namespace AwAVR.VRCSDKPlus
             return GetColorTexture(new Color(r, g, b, a));
         }
 
-        internal static Texture2D GetColorTexture(Color color)
-        {
+        internal static Texture2D GetColorTexture(Color color) {
             tempTexture.SetPixel(0, 0, color);
             tempTexture.Apply();
             return tempTexture;
         }
 
         // ReSharper disable once InconsistentNaming
-        public static VRCExpressionsMenu.Control.ControlType ToControlType(this SerializedProperty property)
-        {
+        public static VRCExpressionsMenu.Control.ControlType ToControlType(this SerializedProperty property) {
             var value = property.enumValueIndex;
-            switch (value)
-            {
+            switch (value) {
                 case 0:
                     return VRCExpressionsMenu.Control.ControlType.Button;
                 case 1:
@@ -463,10 +410,8 @@ namespace AwAVR.VRCSDKPlus
             return VRCExpressionsMenu.Control.ControlType.Button;
         }
 
-        public static int GetEnumValueIndex(this VRCExpressionsMenu.Control.ControlType type)
-        {
-            switch (type)
-            {
+        public static int GetEnumValueIndex(this VRCExpressionsMenu.Control.ControlType type) {
+            switch (type) {
                 case VRCExpressionsMenu.Control.ControlType.Button:
                     return 0;
                 case VRCExpressionsMenu.Control.ControlType.Toggle:
@@ -484,12 +429,10 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        public static int FindIndex(this IEnumerable array, object target)
-        {
+        public static int FindIndex(this IEnumerable array, object target) {
             var enumerator = array.GetEnumerator();
             var index = 0;
-            while (enumerator.MoveNext())
-            {
+            while (enumerator.MoveNext()) {
                 if (enumerator.Current != null && enumerator.Current.Equals(target))
                     return index;
                 index++;
@@ -499,8 +442,7 @@ namespace AwAVR.VRCSDKPlus
         }
 
         internal static bool GetPlayableLayer(this VRCAvatarDescriptor avi, VRCAvatarDescriptor.AnimLayerType type,
-            out AnimatorController controller)
-        {
+            out AnimatorController controller) {
             controller =
                 (from l in avi.baseAnimationLayers.Concat(avi.specialAnimationLayers)
                     where l.type == type
@@ -509,10 +451,8 @@ namespace AwAVR.VRCSDKPlus
         }
 
         internal static bool IterateArray(this SerializedProperty property, Func<int, SerializedProperty, bool> func,
-            params int[] skipIndex)
-        {
-            for (int i = property.arraySize - 1; i >= 0; i--)
-            {
+            params int[] skipIndex) {
+            for (int i = property.arraySize - 1; i >= 0; i--) {
                 if (skipIndex.Contains(i)) continue;
                 if (i >= property.arraySize) continue;
                 if (func(i, property.GetArrayElementAtIndex(i)))
@@ -524,8 +464,7 @@ namespace AwAVR.VRCSDKPlus
 
         #region Keyboard Commands
 
-        internal enum EventCommands
-        {
+        internal enum EventCommands {
             Copy,
             Cut,
             Paste,
@@ -540,8 +479,7 @@ namespace AwAVR.VRCSDKPlus
         }
 
         internal static bool HasReceivedCommand(EventCommands command, string matchFocusControl = "",
-            bool useEvent = true)
-        {
+            bool useEvent = true) {
             if (!string.IsNullOrEmpty(matchFocusControl) && GUI.GetNameOfFocusedControl() != matchFocusControl)
                 return false;
             Event e = Event.current;
@@ -551,8 +489,7 @@ namespace AwAVR.VRCSDKPlus
             return received;
         }
 
-        internal static bool HasReceivedKey(KeyCode key, string matchFocusControl = "", bool useEvent = true)
-        {
+        internal static bool HasReceivedKey(KeyCode key, string matchFocusControl = "", bool useEvent = true) {
             if (!string.IsNullOrEmpty(matchFocusControl) && GUI.GetNameOfFocusedControl() != matchFocusControl)
                 return false;
             Event e = Event.current;
@@ -574,16 +511,13 @@ namespace AwAVR.VRCSDKPlus
             HasReceivedKey(KeyCode.Delete, matchFocusControl, useEvent);
 
         internal static bool HandleConfirmEvents(string matchFocusControl = "", Action onConfirm = null,
-            Action onCancel = null)
-        {
-            if (HasReceivedEnter(matchFocusControl))
-            {
+            Action onCancel = null) {
+            if (HasReceivedEnter(matchFocusControl)) {
                 onConfirm?.Invoke();
                 return true;
             }
 
-            if (HasReceivedCancel(matchFocusControl))
-            {
+            if (HasReceivedCancel(matchFocusControl)) {
                 onCancel?.Invoke();
                 return true;
             }
@@ -592,8 +526,7 @@ namespace AwAVR.VRCSDKPlus
         }
 
         internal static bool HandleTextFocusConfirmCommands(string matchFocusControl, Action onConfirm = null,
-            Action onCancel = null)
-        {
+            Action onCancel = null) {
             if (!HandleConfirmEvents(matchFocusControl, onConfirm, onCancel)) return false;
             GUI.FocusControl(null);
             return true;
@@ -601,23 +534,19 @@ namespace AwAVR.VRCSDKPlus
 
         #endregion
 
-        internal abstract class CustomDropdownBase : PopupWindowContent
-        {
-            internal static readonly GUIStyle backgroundStyle = new GUIStyle()
-            {
+        internal abstract class CustomDropdownBase : PopupWindowContent {
+            internal static readonly GUIStyle backgroundStyle = new GUIStyle() {
                 hover = { background = Toolbox.GetColorTexture(new Color(0.3020f, 0.3020f, 0.3020f)) },
                 active = { background = Toolbox.GetColorTexture(new Color(0.1725f, 0.3647f, 0.5294f)) }
             };
 
-            internal static readonly GUIStyle titleStyle = new GUIStyle(GUI.skin.label)
-            {
+            internal static readonly GUIStyle titleStyle = new GUIStyle(GUI.skin.label) {
                 alignment = TextAnchor.MiddleCenter,
                 fontStyle = FontStyle.Bold
             };
         }
 
-        internal class CustomDropdown<T> : CustomDropdownBase
-        {
+        internal class CustomDropdown<T> : CustomDropdownBase {
             private readonly string title;
             private string search;
             internal DropDownItem[] items;
@@ -632,8 +561,7 @@ namespace AwAVR.VRCSDKPlus
             private readonly Rect[] selectionRects;
 
             public CustomDropdown(string title, IEnumerable<T> itemArray, Action<DropDownItem> itemGUI,
-                Action<int, T> onSelected)
-            {
+                Action<int, T> onSelected) {
                 this.title = title;
                 this.onSelected = onSelected;
                 this.itemGUI = itemGUI;
@@ -641,56 +569,45 @@ namespace AwAVR.VRCSDKPlus
                 selectionRects = new Rect[items.Length];
             }
 
-            public void EnableSearch(Func<T, string, bool> onSearchChanged)
-            {
+            public void EnableSearch(Func<T, string, bool> onSearchChanged) {
                 hasSearch = true;
                 this.onSearchChanged = onSearchChanged;
             }
 
-            public void OrderBy(Func<T, object> orderFunc)
-            {
+            public void OrderBy(Func<T, object> orderFunc) {
                 items = orderFunc != null ? items.OrderBy(item => orderFunc(item.value)).ToArray() : items;
             }
 
-            public void SetExtraOptions(Func<T, object[]> argReturn)
-            {
+            public void SetExtraOptions(Func<T, object[]> argReturn) {
                 foreach (var i in items)
                     i.args = argReturn(i.value);
             }
 
-            public override void OnGUI(Rect rect)
-            {
-                using (new GUILayout.AreaScope(rect))
-                {
+            public override void OnGUI(Rect rect) {
+                using (new GUILayout.AreaScope(rect)) {
                     var e = Event.current;
                     scroll = GUILayout.BeginScrollView(scroll);
-                    if (!string.IsNullOrEmpty(title))
-                    {
+                    if (!string.IsNullOrEmpty(title)) {
                         GUILayout.Label(title, titleStyle);
                         DrawSeparator();
                     }
 
-                    if (hasSearch)
-                    {
+                    if (hasSearch) {
                         EditorGUI.BeginChangeCheck();
                         if (firstPass) GUI.SetNextControlName($"{title}SearchBar");
                         search = EditorGUILayout.TextField(search, GUI.skin.GetStyle("SearchTextField"));
-                        if (EditorGUI.EndChangeCheck())
-                        {
+                        if (EditorGUI.EndChangeCheck()) {
                             foreach (var i in items)
                                 i.displayed = onSearchChanged(i.value, search);
                         }
                     }
 
                     var t = e.type;
-                    for (int i = 0; i < items.Length; i++)
-                    {
+                    for (int i = 0; i < items.Length; i++) {
                         var item = items[i];
                         if (!item.displayed) continue;
-                        if (!firstPass)
-                        {
-                            if (GUI.Button(selectionRects[i], string.Empty, backgroundStyle))
-                            {
+                        if (!firstPass) {
+                            if (GUI.Button(selectionRects[i], string.Empty, backgroundStyle)) {
                                 onSelected(item.itemIndex, item.value);
                                 editorWindow.Close();
                             }
@@ -698,8 +615,7 @@ namespace AwAVR.VRCSDKPlus
 
                         using (new GUILayout.VerticalScope()) itemGUI(item);
 
-                        if (t == EventType.Repaint)
-                        {
+                        if (t == EventType.Repaint) {
                             selectionRects[i] = GUILayoutUtility.GetLastRect();
 
                             if (firstPass && selectionRects[i].width > width)
@@ -707,8 +623,7 @@ namespace AwAVR.VRCSDKPlus
                         }
                     }
 
-                    if (t == EventType.Repaint && firstPass)
-                    {
+                    if (t == EventType.Repaint && firstPass) {
                         firstPass = false;
                         GUI.FocusControl($"{title}SearchBar");
                     }
@@ -719,8 +634,7 @@ namespace AwAVR.VRCSDKPlus
                 }
             }
 
-            public override Vector2 GetWindowSize()
-            {
+            public override Vector2 GetWindowSize() {
                 Vector2 ogSize = base.GetWindowSize();
                 if (!firstPass) ogSize.x = width + 21;
                 return ogSize;
@@ -728,22 +642,19 @@ namespace AwAVR.VRCSDKPlus
 
             public void Show(Rect position) => PopupWindow.Show(position, this);
 
-            internal class DropDownItem
-            {
+            internal class DropDownItem {
                 internal readonly int itemIndex;
                 internal readonly T value;
 
                 internal object[] args;
                 internal bool displayed = true;
 
-                internal object extra
-                {
+                internal object extra {
                     get => args[0];
                     set => args[0] = value;
                 }
 
-                internal DropDownItem(T value, int itemIndex)
-                {
+                internal DropDownItem(T value, int itemIndex) {
                     this.value = value;
                     this.itemIndex = itemIndex;
                 }
@@ -751,8 +662,7 @@ namespace AwAVR.VRCSDKPlus
                 public static implicit operator T(DropDownItem i) => i.value;
             }
 
-            private static void DrawSeparator(int thickness = 2, int padding = 10)
-            {
+            private static void DrawSeparator(int thickness = 2, int padding = 10) {
                 Rect r = EditorGUILayout.GetControlRect(GUILayout.Height(thickness + padding));
                 r.height = thickness;
                 r.y += padding / 2f;

@@ -7,28 +7,23 @@ using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
-namespace AwAVR.VRCSDKPlus
-{
-    static class ControlRenderer
-    {
+namespace AwAVR.VRCSDKPlus {
+    static class ControlRenderer {
         private const float IconSize = 96;
         private const float IconSpace = IconSize + 3;
 
         private const float CompactIconSize = 60;
         private const float CompactIconSpace = CompactIconSize + 3;
 
-        public static void DrawControl(SerializedProperty property, VRCExpressionParameters parameters)
-        {
+        public static void DrawControl(SerializedProperty property, VRCExpressionParameters parameters) {
             MainContainer(property);
             EditorGUILayout.Separator();
             ParameterContainer(property, parameters);
 
-            if (property != null)
-            {
+            if (property != null) {
                 EditorGUILayout.Separator();
 
-                switch ((VRCExpressionsMenu.Control.ControlType)property.FindPropertyRelative("type").intValue)
-                {
+                switch ((VRCExpressionsMenu.Control.ControlType)property.FindPropertyRelative("type").intValue) {
                     case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
                         RadialContainer(property, parameters);
                         break;
@@ -49,14 +44,11 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        public static void DrawControlCompact(SerializedProperty property, VRCExpressionParameters parameters)
-        {
+        public static void DrawControlCompact(SerializedProperty property, VRCExpressionParameters parameters) {
             CompactMainContainer(property, parameters);
 
-            if (property != null)
-            {
-                switch ((VRCExpressionsMenu.Control.ControlType)property.FindPropertyRelative("type").intValue)
-                {
+            if (property != null) {
+                switch ((VRCExpressionsMenu.Control.ControlType)property.FindPropertyRelative("type").intValue) {
                     case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
                         RadialContainer(property, parameters);
                         break;
@@ -81,8 +73,7 @@ namespace AwAVR.VRCSDKPlus
 
         #region Main container
 
-        static void MainContainer(SerializedProperty property)
-        {
+        static void MainContainer(SerializedProperty property) {
             var rect = EditorGUILayout
                 .GetControlRect(false, 147);
             Toolbox.Container.GUIBox(ref rect);
@@ -100,8 +91,7 @@ namespace AwAVR.VRCSDKPlus
             DrawHelp(helpRect, property);
         }
 
-        static void CompactMainContainer(SerializedProperty property, VRCExpressionParameters parameters)
-        {
+        static void CompactMainContainer(SerializedProperty property, VRCExpressionParameters parameters) {
             var rect = EditorGUILayout.GetControlRect(false, 66);
             Toolbox.Container.GUIBox(ref rect);
 
@@ -130,18 +120,15 @@ namespace AwAVR.VRCSDKPlus
             // ToDo Draw error help if Parameter not found
         }
 
-        static void DrawName(Rect rect, SerializedProperty property, bool drawLabel)
-        {
-            if (property == null)
-            {
+        static void DrawName(Rect rect, SerializedProperty property, bool drawLabel) {
+            if (property == null) {
                 Toolbox.Placeholder.GUI(rect);
                 return;
             }
 
             var name = property.FindPropertyRelative("name");
 
-            if (drawLabel)
-            {
+            if (drawLabel) {
                 var label = new Rect(rect.x, rect.y, 100, rect.height);
                 rect = new Rect(rect.x + 103, rect.y, rect.width - 103, rect.height);
 
@@ -153,16 +140,13 @@ namespace AwAVR.VRCSDKPlus
                 GUI.Label(rect, "Name", Toolbox.Styles.Label.PlaceHolder);
         }
 
-        static void DrawType(Rect rect, SerializedProperty property, bool drawLabel)
-        {
-            if (property == null)
-            {
+        static void DrawType(Rect rect, SerializedProperty property, bool drawLabel) {
+            if (property == null) {
                 Toolbox.Placeholder.GUI(rect);
                 return;
             }
 
-            if (drawLabel)
-            {
+            if (drawLabel) {
                 var label = new Rect(rect.x, rect.y, 100, rect.height);
                 rect = new Rect(rect.x + 103, rect.y, rect.width - 103, rect.height);
 
@@ -176,18 +160,15 @@ namespace AwAVR.VRCSDKPlus
                 ConversionEntry(property, controlType, newType);
         }
 
-        static void DrawStyle(Rect rect, SerializedProperty property, bool drawLabel)
-        {
+        static void DrawStyle(Rect rect, SerializedProperty property, bool drawLabel) {
             const float toggleSize = 21;
 
-            if (property == null)
-            {
+            if (property == null) {
                 Toolbox.Placeholder.GUI(rect);
                 return;
             }
 
-            if (drawLabel)
-            {
+            if (drawLabel) {
                 Rect labelRect = new Rect(rect.x, rect.y, 100, rect.height);
                 rect = new Rect(rect.x + 103, rect.y, rect.width - 103, rect.height);
                 GUI.Label(labelRect, "Style");
@@ -204,10 +185,8 @@ namespace AwAVR.VRCSDKPlus
             var isBold = rawName.Contains("<b>") && rawName.Contains("</b>");
             var isItalic = rawName.Contains("<i>") && rawName.Contains("</i>");
             var m = Regex.Match(rawName, @"<color=(#[0-9|A-F]{6,8})>");
-            if (m.Success)
-            {
-                if (rawName.Contains("</color>"))
-                {
+            if (m.Success) {
+                if (rawName.Contains("</color>")) {
                     if (ColorUtility.TryParseHtmlString(m.Groups[1].Value, out Color newColor))
                         textColor = newColor;
                 }
@@ -216,14 +195,12 @@ namespace AwAVR.VRCSDKPlus
 
             EditorGUI.BeginChangeCheck();
             textColor = EditorGUI.ColorField(colorRect, textColor);
-            if (EditorGUI.EndChangeCheck())
-            {
+            if (EditorGUI.EndChangeCheck()) {
                 rawName = Regex.Replace(rawName, @"</?color=?.*?>", string.Empty);
                 rawName = $"<color=#{ColorUtility.ToHtmlStringRGB(textColor)}>{rawName}</color>";
             }
 
-            void SetCharTag(char c, bool state)
-            {
+            void SetCharTag(char c, bool state) {
                 rawName = !state ? Regex.Replace(rawName, $@"</?{c}>", string.Empty) : $"<{c}>{rawName}</{c}>";
             }
 
@@ -243,12 +220,10 @@ namespace AwAVR.VRCSDKPlus
             property.FindPropertyRelative("name").stringValue = rawName;
         }
 
-        static void DrawIcon(Rect rect, SerializedProperty property)
-        {
+        static void DrawIcon(Rect rect, SerializedProperty property) {
             if (property == null)
                 Toolbox.Placeholder.GUI(rect);
-            else
-            {
+            else {
                 var value = property.FindPropertyRelative("icon");
 
                 value.objectReferenceValue = EditorGUI.ObjectField(
@@ -261,10 +236,8 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        static void DrawHelp(Rect rect, SerializedProperty property)
-        {
-            if (property == null)
-            {
+        static void DrawHelp(Rect rect, SerializedProperty property) {
+            if (property == null) {
                 Toolbox.Placeholder.GUI(rect);
                 return;
             }
@@ -273,10 +246,8 @@ namespace AwAVR.VRCSDKPlus
             EditorGUI.HelpBox(rect, message, MessageType.Info);
         }
 
-        static string GetHelpMessage(SerializedProperty property)
-        {
-            switch (property.FindPropertyRelative("type").ToControlType())
-            {
+        static string GetHelpMessage(SerializedProperty property) {
+            switch (property.FindPropertyRelative("type").ToControlType()) {
                 case VRCExpressionsMenu.Control.ControlType.Button:
                     return
                         "Click or hold to activate. The button remains active for a minimum 0.2s.\nWhile active the (Parameter) is set to (Value).\nWhen inactive the (Parameter) is reset to zero.";
@@ -305,8 +276,7 @@ namespace AwAVR.VRCSDKPlus
         #region Type Conversion
 
         private static void ConversionEntry(SerializedProperty property,
-            VRCExpressionsMenu.Control.ControlType tOld, VRCExpressionsMenu.Control.ControlType tNew)
-        {
+            VRCExpressionsMenu.Control.ControlType tOld, VRCExpressionsMenu.Control.ControlType tNew) {
             // Is old one button / toggle, and new one not?
             if (
                     (tOld == VRCExpressionsMenu.Control.ControlType.Button ||
@@ -343,8 +313,7 @@ namespace AwAVR.VRCSDKPlus
         }
 
         private static bool IsPuppetConversion(VRCExpressionsMenu.Control.ControlType tOld,
-            VRCExpressionsMenu.Control.ControlType tNew)
-        {
+            VRCExpressionsMenu.Control.ControlType tNew) {
             return (
                        tOld == VRCExpressionsMenu.Control.ControlType.RadialPuppet ||
                        tOld == VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet ||
@@ -358,8 +327,7 @@ namespace AwAVR.VRCSDKPlus
         }
 
         private static void DoPuppetConversion(SerializedProperty property,
-            VRCExpressionsMenu.Control.ControlType tNew)
-        {
+            VRCExpressionsMenu.Control.ControlType tNew) {
             var subParameters = property.FindPropertyRelative("subParameters");
             var sub0 = subParameters.GetArrayElementAtIndex(0).FindPropertyRelative("name").stringValue;
             var sub1 = subParameters.arraySize > 1
@@ -371,8 +339,7 @@ namespace AwAVR.VRCSDKPlus
             subParameters.GetArrayElementAtIndex(0).FindPropertyRelative("name").stringValue = sub0;
 
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-            switch (tNew)
-            {
+            switch (tNew) {
                 case VRCExpressionsMenu.Control.ControlType.TwoAxisPuppet:
                     subParameters.InsertArrayElementAtIndex(1);
                     subParameters.GetArrayElementAtIndex(1).FindPropertyRelative("name").stringValue = sub1;
@@ -390,13 +357,11 @@ namespace AwAVR.VRCSDKPlus
         }
 
         private static void SetupSubParameters(SerializedProperty property,
-            VRCExpressionsMenu.Control.ControlType type)
-        {
+            VRCExpressionsMenu.Control.ControlType type) {
             var subParameters = property.FindPropertyRelative("subParameters");
             subParameters.ClearArray();
 
-            switch (type)
-            {
+            switch (type) {
                 case VRCExpressionsMenu.Control.ControlType.RadialPuppet:
                 case VRCExpressionsMenu.Control.ControlType.SubMenu:
                     subParameters.InsertArrayElementAtIndex(0);
@@ -432,19 +397,15 @@ namespace AwAVR.VRCSDKPlus
             VRCExpressionParameters parameters,
             out int index,
             out string[] parametersAsString
-        )
-        {
+        ) {
             index = -2;
-            if (!parameters)
-            {
+            if (!parameters) {
                 parametersAsString = Array.Empty<string>();
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                for (var i = 0; i < parameters.parameters.Length; i++)
-                {
+            if (!string.IsNullOrWhiteSpace(name)) {
+                for (var i = 0; i < parameters.parameters.Length; i++) {
                     if (parameters.parameters[i].name != name) continue;
 
                     index = i + 1;
@@ -456,10 +417,8 @@ namespace AwAVR.VRCSDKPlus
 
             parametersAsString = new string[parameters.parameters.Length + 1];
             parametersAsString[0] = "[None]";
-            for (var i = 0; i < parameters.parameters.Length; i++)
-            {
-                switch (parameters.parameters[i].valueType)
-                {
+            for (var i = 0; i < parameters.parameters.Length; i++) {
+                switch (parameters.parameters[i].valueType) {
                     case VRCExpressionParameters.ValueType.Int:
                         parametersAsString[i + 1] = $"{parameters.parameters[i].name} [int]";
                         break;
@@ -480,11 +439,9 @@ namespace AwAVR.VRCSDKPlus
             out VRCExpressionParameters.Parameter[] filteredParameters,
             out string[] filteredParametersAsString,
             VRCExpressionParameters.ValueType filter
-        )
-        {
+        ) {
             index = -2;
-            if (!parameters)
-            {
+            if (!parameters) {
                 filteredParameters = Array.Empty<VRCExpressionParameters.Parameter>();
                 filteredParametersAsString = Array.Empty<string>();
                 return;
@@ -492,10 +449,8 @@ namespace AwAVR.VRCSDKPlus
 
             filteredParameters = parameters.parameters.Where(p => p.valueType == filter).ToArray();
 
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                for (var i = 0; i < filteredParameters.Length; i++)
-                {
+            if (!string.IsNullOrWhiteSpace(name)) {
+                for (var i = 0; i < filteredParameters.Length; i++) {
                     if (filteredParameters[i].name != name) continue;
 
                     index = i + 1;
@@ -507,10 +462,8 @@ namespace AwAVR.VRCSDKPlus
 
             filteredParametersAsString = new string[filteredParameters.Length + 1];
             filteredParametersAsString[0] = "[None]";
-            for (var i = 0; i < filteredParameters.Length; i++)
-            {
-                switch (filteredParameters[i].valueType)
-                {
+            for (var i = 0; i < filteredParameters.Length; i++) {
+                switch (filteredParameters[i].valueType) {
                     case VRCExpressionParameters.ValueType.Int:
                         filteredParametersAsString[i + 1] = $"{filteredParameters[i].name} [int]";
                         break;
@@ -528,28 +481,24 @@ namespace AwAVR.VRCSDKPlus
 
         #region DrawParameterSelector
 
-        struct ParameterSelectorOptions
-        {
+        struct ParameterSelectorOptions {
             public Action ExtraGUI;
             public Rect Rect;
             public bool Required;
 
-            public ParameterSelectorOptions(Rect rect, bool required, Action extraGUI = null)
-            {
+            public ParameterSelectorOptions(Rect rect, bool required, Action extraGUI = null) {
                 this.Required = required;
                 this.Rect = rect;
                 this.ExtraGUI = extraGUI;
             }
 
-            public ParameterSelectorOptions(Rect rect, Action extraGUI = null)
-            {
+            public ParameterSelectorOptions(Rect rect, Action extraGUI = null) {
                 this.Required = false;
                 this.Rect = rect;
                 this.ExtraGUI = extraGUI;
             }
 
-            public ParameterSelectorOptions(bool required, Action extraGUI = null)
-            {
+            public ParameterSelectorOptions(bool required, Action extraGUI = null) {
                 this.Required = required;
                 this.Rect = default;
                 this.ExtraGUI = extraGUI;
@@ -561,8 +510,7 @@ namespace AwAVR.VRCSDKPlus
             SerializedProperty property,
             VRCExpressionParameters parameters,
             ParameterSelectorOptions options = default
-        )
-        {
+        ) {
             BuildParameterArray(
                 property.FindPropertyRelative("name").stringValue,
                 parameters,
@@ -587,8 +535,7 @@ namespace AwAVR.VRCSDKPlus
             VRCExpressionParameters parameters,
             VRCExpressionParameters.ValueType filter,
             ParameterSelectorOptions options = default
-        )
-        {
+        ) {
             BuildParameterArray(
                 property.FindPropertyRelative("name").stringValue,
                 parameters,
@@ -618,8 +565,7 @@ namespace AwAVR.VRCSDKPlus
             string[] parametersAsString,
             bool isFiltered,
             ParameterSelectorOptions options
-        )
-        {
+        ) {
             var isEmpty = index == -1;
             var isMissing = index == -2;
             bool willWarn = isMissing || options.Required && isEmpty;
@@ -633,8 +579,7 @@ namespace AwAVR.VRCSDKPlus
                 : Toolbox.GUIContent.MissingParametersTooltip;
 
             var rectNotProvided = options.Rect == default;
-            using (new GUILayout.HorizontalScope())
-            {
+            using (new GUILayout.HorizontalScope()) {
                 const float contentAddWidth = 50;
                 const float contentWarnWidth = 18;
                 const float contentDropdownWidth = 20;
@@ -648,8 +593,7 @@ namespace AwAVR.VRCSDKPlus
                 var name = property.FindPropertyRelative("name");
 
                 Rect labelRect = new Rect(options.Rect) { width = hasLabel ? 120 : 0 };
-                Rect textfieldRect = new Rect(labelRect)
-                {
+                Rect textfieldRect = new Rect(labelRect) {
                     x = labelRect.x + labelRect.width,
                     width = options.Rect.width - labelRect.width - contentDropdownWidth - 2
                 };
@@ -658,19 +602,16 @@ namespace AwAVR.VRCSDKPlus
                 Rect addRect = Rect.zero;
                 Rect warnRect = Rect.zero;
 
-                if (targetParameters && isMissing)
-                {
+                if (targetParameters && isMissing) {
                     textfieldRect.width -= missingFullWidth;
                     dropdownRect.x -= missingFullWidth;
-                    addRect = new Rect(options.Rect)
-                    {
+                    addRect = new Rect(options.Rect) {
                         x = textfieldRect.x + textfieldRect.width + contentDropdownWidth + 2,
                         width = contentAddWidth
                     };
                     warnRect = new Rect(addRect) { x = addRect.x + addRect.width, width = contentWarnWidth };
                 }
-                else if (!targetParameters || options.Required && isEmpty || true)
-                {
+                else if (!targetParameters || options.Required && isEmpty || true) {
                     textfieldRect.width -= contentWarnWidth;
                     dropdownRect.x -= contentWarnWidth;
                     warnRect = new Rect(dropdownRect)
@@ -678,8 +619,7 @@ namespace AwAVR.VRCSDKPlus
                 }
 
                 if (hasLabel) GUI.Label(labelRect, label);
-                using (new EditorGUI.DisabledScope(!targetParameters || parametersAsString.Length <= 1))
-                {
+                using (new EditorGUI.DisabledScope(!targetParameters || parametersAsString.Length <= 1)) {
                     var newIndex = EditorGUI.Popup(dropdownRect, string.Empty, index, parametersAsString);
                     if (index != newIndex)
                         name.stringValue = newIndex == 0 ? string.Empty : parameters[newIndex - 1].name;
@@ -693,17 +633,18 @@ namespace AwAVR.VRCSDKPlus
                         new GUIContent(Toolbox.GUIContent.Warn) { tooltip = warnMsg });
 
 #if PARAMETER_RENAMER_INSTALLED
-                if (!willWarn)
-                {
+                if (!willWarn) {
                     var editIcon = new GUIContent(EditorGUIUtility.IconContent("d_editicon.sml"));
-                    if (GUI.Button(warnRect, new GUIContent(editIcon), EditorStyles.label))
-                    {
-                        try
-                        {
+                    if (GUI.Button(warnRect, new GUIContent(editIcon), EditorStyles.label)) {
+                        try {
+#if PARAMETER_RENAMER_1_4_0
+                            ParameterRenamer.Show(name.stringValue, VRCSDKPlus.GetAvatar(),
+                                runAfterRenameFunction: VRCSDKPlus.RefreshAvatarInfo);
+#else
                             ParameterRenamer.Show(name.stringValue, VRCSDKPlus.GetAvatar());
+#endif
                         }
-                        catch (Exception exception)
-                        {
+                        catch (Exception exception) {
                             Console.WriteLine(exception);
                             throw;
                         }
@@ -711,12 +652,10 @@ namespace AwAVR.VRCSDKPlus
                 }
 #endif
 
-                if (isMissing)
-                {
+                if (isMissing) {
                     int dummy;
 
-                    if (!isFiltered)
-                    {
+                    if (!isFiltered) {
                         dummy = EditorGUI.Popup(addRect, -1,
                             Enum.GetNames(typeof(VRCExpressionParameters.ValueType)));
 
@@ -725,20 +664,17 @@ namespace AwAVR.VRCSDKPlus
                     }
                     else dummy = GUI.Button(addRect, "Add") ? 1 : -1;
 
-                    if (dummy != -1)
-                    {
+                    if (dummy != -1) {
                         SerializedObject so = new SerializedObject(targetParameters);
                         var param = so.FindProperty("parameters");
                         var prop = param.GetArrayElementAtIndex(param.arraySize++);
                         prop.FindPropertyRelative("valueType").enumValueIndex = dummy;
                         prop.FindPropertyRelative("name").stringValue = name.stringValue;
                         prop.FindPropertyRelative("saved").boolValue = true;
-                        try
-                        {
+                        try {
                             prop.FindPropertyRelative("networkSynced").boolValue = true;
                         }
-                        catch
-                        {
+                        catch {
                         }
 
                         so.ApplyModifiedProperties();
@@ -759,31 +695,26 @@ namespace AwAVR.VRCSDKPlus
             SerializedProperty property,
             VRCExpressionParameters parameters,
             Rect rect = default
-        )
-        {
+        ) {
             var rectProvided = rect != default;
 
-            if (property?.FindPropertyRelative("parameter") == null)
-            {
+            if (property?.FindPropertyRelative("parameter") == null) {
                 if (rectProvided)
                     Toolbox.Placeholder.GUI(rect);
-                else
-                {
+                else {
                     Toolbox.Container.BeginLayout();
                     Toolbox.Placeholder.GUILayout(18);
                     Toolbox.Container.EndLayout();
                 }
             }
-            else
-            {
+            else {
                 if (!rectProvided) Toolbox.Container.BeginLayout();
 
                 float contentValueSelectorWidth = 50;
                 Rect selectorRect = default;
                 Rect valueRect = default;
 
-                if (rectProvided)
-                {
+                if (rectProvided) {
                     selectorRect = new Rect(rect.x, rect.y, rect.width - contentValueSelectorWidth - 3,
                         rect.height);
                     valueRect = new Rect(selectorRect.x + selectorRect.width + 3, rect.y,
@@ -796,12 +727,10 @@ namespace AwAVR.VRCSDKPlus
                 bool isRequired = t == VRCExpressionsMenu.Control.ControlType.Button ||
                                   t == VRCExpressionsMenu.Control.ControlType.Toggle;
                 DrawParameterSelector(rectProvided ? string.Empty : "Parameter", parameter, parameters,
-                    new ParameterSelectorOptions()
-                    {
+                    new ParameterSelectorOptions() {
                         Rect = selectorRect,
                         Required = isRequired,
-                        ExtraGUI = () =>
-                        {
+                        ExtraGUI = () => {
                             #region Value selector
 
                             var parameterName = parameter.FindPropertyRelative("name");
@@ -810,8 +739,7 @@ namespace AwAVR.VRCSDKPlus
 
                             // Check what type the parameter is
                             var value = property.FindPropertyRelative("value");
-                            switch (param?.valueType)
-                            {
+                            switch (param?.valueType) {
                                 case VRCExpressionParameters.ValueType.Int:
                                     value.floatValue = Mathf.Clamp(
                                         rectProvided
@@ -830,8 +758,7 @@ namespace AwAVR.VRCSDKPlus
                                     break;
 
                                 case VRCExpressionParameters.ValueType.Bool:
-                                    using (new EditorGUI.DisabledScope(true))
-                                    {
+                                    using (new EditorGUI.DisabledScope(true)) {
                                         if (rectProvided) EditorGUI.TextField(valueRect, string.Empty);
                                         else
                                             EditorGUILayout.TextField(string.Empty,
@@ -863,8 +790,7 @@ namespace AwAVR.VRCSDKPlus
 
         #region Miscellaneous containers
 
-        static void RadialContainer(SerializedProperty property, VRCExpressionParameters parameters)
-        {
+        static void RadialContainer(SerializedProperty property, VRCExpressionParameters parameters) {
             using (new Toolbox.Container.Vertical())
                 DrawParameterSelector(
                     "Rotation",
@@ -875,22 +801,17 @@ namespace AwAVR.VRCSDKPlus
                 );
         }
 
-        static void SubMenuContainer(SerializedProperty property)
-        {
-            using (new Toolbox.Container.Vertical())
-            {
+        static void SubMenuContainer(SerializedProperty property) {
+            using (new Toolbox.Container.Vertical()) {
                 var subMenu = property.FindPropertyRelative("subMenu");
                 var nameProperty = property.FindPropertyRelative("name");
                 bool emptySubmenu = subMenu.objectReferenceValue == null;
 
-                using (new GUILayout.HorizontalScope())
-                {
+                using (new GUILayout.HorizontalScope()) {
                     EditorGUILayout.PropertyField(subMenu);
-                    if (emptySubmenu)
-                    {
+                    if (emptySubmenu) {
                         using (new EditorGUI.DisabledScope(VRCMenuPlus.GetCurrentNode()?.Value == null))
-                            if (GUILayout.Button("New", GUILayout.Width(40)))
-                            {
+                            if (GUILayout.Button("New", GUILayout.Width(40))) {
                                 var m = VRCMenuPlus.GetCurrentNode().Value;
                                 var path = AssetDatabase.GetAssetPath(m);
                                 if (string.IsNullOrEmpty(path))
@@ -915,8 +836,7 @@ namespace AwAVR.VRCSDKPlus
                             Toolbox.Styles.icon);
                     }
 
-                    using (new EditorGUI.DisabledScope(emptySubmenu))
-                    {
+                    using (new EditorGUI.DisabledScope(emptySubmenu)) {
                         if (Helpers.ClickableButton(Toolbox.GUIContent.Folder,
                                 Toolbox.Styles.icon))
                             Selection.activeObject = subMenu.objectReferenceValue;
@@ -929,18 +849,14 @@ namespace AwAVR.VRCSDKPlus
         }
 
         static void CompactTwoAxisParametersContainer(SerializedProperty property,
-            VRCExpressionParameters parameters)
-        {
-            using (new Toolbox.Container.Vertical())
-            {
-                using (new GUILayout.HorizontalScope())
-                {
+            VRCExpressionParameters parameters) {
+            using (new Toolbox.Container.Vertical()) {
+                using (new GUILayout.HorizontalScope()) {
                     using (new GUILayout.HorizontalScope())
                         GUILayout.Label("Axis Parameters", Toolbox.Styles.Label.Centered);
 
 
-                    using (new GUILayout.HorizontalScope())
-                    {
+                    using (new GUILayout.HorizontalScope()) {
                         GUILayout.Label("Name -", Toolbox.Styles.Label.Centered);
                         GUILayout.Label("Name +", Toolbox.Styles.Label.Centered);
                     }
@@ -952,11 +868,9 @@ namespace AwAVR.VRCSDKPlus
 
                 var labels = SafeGetLabels(property);
 
-                using (new GUILayout.HorizontalScope())
-                {
+                using (new GUILayout.HorizontalScope()) {
                     var rect = EditorGUILayout.GetControlRect();
-                    using (new GUILayout.HorizontalScope())
-                    {
+                    using (new GUILayout.HorizontalScope()) {
                         DrawParameterSelector(
                             "Horizontal",
                             sub0,
@@ -966,18 +880,15 @@ namespace AwAVR.VRCSDKPlus
                         );
                     }
 
-                    using (new GUILayout.HorizontalScope())
-                    {
+                    using (new GUILayout.HorizontalScope()) {
                         DrawLabel(labels.GetArrayElementAtIndex(0), "Left");
                         DrawLabel(labels.GetArrayElementAtIndex(1), "Right");
                     }
                 }
 
-                using (new GUILayout.HorizontalScope())
-                {
+                using (new GUILayout.HorizontalScope()) {
                     var rect = EditorGUILayout.GetControlRect();
-                    using (new GUILayout.HorizontalScope())
-                    {
+                    using (new GUILayout.HorizontalScope()) {
                         DrawParameterSelector(
                             "Vertical",
                             sub1,
@@ -987,8 +898,7 @@ namespace AwAVR.VRCSDKPlus
                         );
                     }
 
-                    using (new GUILayout.HorizontalScope())
-                    {
+                    using (new GUILayout.HorizontalScope()) {
                         DrawLabel(labels.GetArrayElementAtIndex(2), "Down");
                         DrawLabel(labels.GetArrayElementAtIndex(3), "Up");
                     }
@@ -997,12 +907,9 @@ namespace AwAVR.VRCSDKPlus
         }
 
         static void CompactFourAxisParametersContainer(SerializedProperty property,
-            VRCExpressionParameters parameters)
-        {
-            using (new Toolbox.Container.Vertical())
-            {
-                using (new GUILayout.HorizontalScope())
-                {
+            VRCExpressionParameters parameters) {
+            using (new Toolbox.Container.Vertical()) {
+                using (new GUILayout.HorizontalScope()) {
                     var headerRect = EditorGUILayout.GetControlRect();
                     var r1 = new Rect(headerRect) { width = headerRect.width / 2 };
                     var r2 = new Rect(r1) { x = r1.x + r1.width };
@@ -1018,11 +925,9 @@ namespace AwAVR.VRCSDKPlus
 
                 var labels = SafeGetLabels(property);
 
-                using (new GUILayout.HorizontalScope())
-                {
+                using (new GUILayout.HorizontalScope()) {
                     var r = EditorGUILayout.GetControlRect();
-                    using (new GUILayout.HorizontalScope())
-                    {
+                    using (new GUILayout.HorizontalScope()) {
                         DrawParameterSelector(
                             "Up",
                             sub0,
@@ -1036,11 +941,9 @@ namespace AwAVR.VRCSDKPlus
                         DrawLabel(labels.GetArrayElementAtIndex(0), "Name");
                 }
 
-                using (new GUILayout.HorizontalScope())
-                {
+                using (new GUILayout.HorizontalScope()) {
                     var r = EditorGUILayout.GetControlRect();
-                    using (new GUILayout.HorizontalScope())
-                    {
+                    using (new GUILayout.HorizontalScope()) {
                         DrawParameterSelector(
                             "Right",
                             sub1,
@@ -1054,11 +957,9 @@ namespace AwAVR.VRCSDKPlus
                         DrawLabel(labels.GetArrayElementAtIndex(1), "Name");
                 }
 
-                using (new GUILayout.HorizontalScope())
-                {
+                using (new GUILayout.HorizontalScope()) {
                     var r = EditorGUILayout.GetControlRect();
-                    using (new GUILayout.HorizontalScope())
-                    {
+                    using (new GUILayout.HorizontalScope()) {
                         DrawParameterSelector(
                             "Down",
                             sub2,
@@ -1072,11 +973,9 @@ namespace AwAVR.VRCSDKPlus
                         DrawLabel(labels.GetArrayElementAtIndex(2), "Name");
                 }
 
-                using (new GUILayout.HorizontalScope())
-                {
+                using (new GUILayout.HorizontalScope()) {
                     var r = EditorGUILayout.GetControlRect();
-                    using (new GUILayout.HorizontalScope())
-                    {
+                    using (new GUILayout.HorizontalScope()) {
                         DrawParameterSelector(
                             "Left",
                             sub3,
@@ -1092,8 +991,7 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        static void TwoAxisParametersContainer(SerializedProperty property, VRCExpressionParameters parameters)
-        {
+        static void TwoAxisParametersContainer(SerializedProperty property, VRCExpressionParameters parameters) {
             Toolbox.Container.BeginLayout();
 
             GUILayout.Label("Axis Parameters", Toolbox.Styles.Label.Centered);
@@ -1121,8 +1019,7 @@ namespace AwAVR.VRCSDKPlus
             Toolbox.Container.EndLayout();
         }
 
-        static void FourAxisParametersContainer(SerializedProperty property, VRCExpressionParameters parameters)
-        {
+        static void FourAxisParametersContainer(SerializedProperty property, VRCExpressionParameters parameters) {
             Toolbox.Container.BeginLayout("Axis Parameters");
 
             var subs = property.FindPropertyRelative("subParameters");
@@ -1166,12 +1063,10 @@ namespace AwAVR.VRCSDKPlus
             Toolbox.Container.EndLayout();
         }
 
-        static void AxisCustomisationContainer(SerializedProperty property)
-        {
+        static void AxisCustomisationContainer(SerializedProperty property) {
             var labels = SafeGetLabels(property);
 
-            using (new Toolbox.Container.Vertical("Customization"))
-            {
+            using (new Toolbox.Container.Vertical("Customization")) {
                 DrawLabel(labels.GetArrayElementAtIndex(0), "Up");
                 DrawLabel(labels.GetArrayElementAtIndex(1), "Right");
                 DrawLabel(labels.GetArrayElementAtIndex(2), "Down");
@@ -1179,18 +1074,15 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        static SerializedProperty SafeGetLabels(SerializedProperty property)
-        {
+        static SerializedProperty SafeGetLabels(SerializedProperty property) {
             var labels = property.FindPropertyRelative("labels");
 
             labels.arraySize = 4;
             var l0 = labels.GetArrayElementAtIndex(0);
-            if (l0 == null)
-            {
+            if (l0 == null) {
                 var menu = (VRCExpressionsMenu)labels.serializedObject.targetObject;
                 var index = menu.controls.FindIndex(property.objectReferenceValue);
-                menu.controls[index].labels = new[]
-                {
+                menu.controls[index].labels = new[] {
                     new VRCExpressionsMenu.Control.Label(),
                     new VRCExpressionsMenu.Control.Label(),
                     new VRCExpressionsMenu.Control.Label(),
@@ -1204,8 +1096,7 @@ namespace AwAVR.VRCSDKPlus
             return labels;
         }
 
-        static void DrawLabel(SerializedProperty property, string type)
-        {
+        static void DrawLabel(SerializedProperty property, string type) {
             bool compact = Toolbox.Preferences.CompactMode;
             float imgWidth = compact ? 28 : 58;
             float imgHeight = compact ? EditorGUIUtility.singleLineHeight : 58;
@@ -1214,10 +1105,8 @@ namespace AwAVR.VRCSDKPlus
             var nameProperty = property.FindPropertyRelative("name");
             if (!compact) EditorGUILayout.BeginVertical("helpbox");
 
-            using (new GUILayout.HorizontalScope())
-            {
-                using (new GUILayout.VerticalScope())
-                {
+            using (new GUILayout.HorizontalScope()) {
+                using (new GUILayout.VerticalScope()) {
                     if (!compact)
                         using (new EditorGUI.DisabledScope(true))
                             EditorGUILayout.LabelField("Axis", type,

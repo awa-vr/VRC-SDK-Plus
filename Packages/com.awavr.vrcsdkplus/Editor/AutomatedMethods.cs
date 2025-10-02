@@ -5,12 +5,9 @@ using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
-namespace AwAVR.VRCSDKPlus
-{
-    internal sealed class AutomatedMethods
-    {
-        internal static void OverrideEditor(Type componentType, Type editorType)
-        {
+namespace AwAVR.VRCSDKPlus {
+    internal sealed class AutomatedMethods {
+        internal static void OverrideEditor(Type componentType, Type editorType) {
             Type attributeType =
                 Type.GetType(
                     "UnityEditor.CustomEditorAttributes, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
@@ -34,14 +31,12 @@ namespace AwAVR.VRCSDKPlus
 
 
         [InitializeOnLoadMethod]
-        private static void DelayCallOverride()
-        {
+        private static void DelayCallOverride() {
             EditorApplication.delayCall -= InitialOverride;
             EditorApplication.delayCall += InitialOverride;
         }
 
-        private static void InitialOverride()
-        {
+        private static void InitialOverride() {
             EditorApplication.delayCall -= InitialOverride;
 
             Type attributeType =
@@ -50,10 +45,8 @@ namespace AwAVR.VRCSDKPlus
             FieldInfo editorsInitializedField =
                 attributeType.GetField("s_Initialized", BindingFlags.Static | BindingFlags.NonPublic);
 
-            try
-            {
-                if (!(bool)editorsInitializedField.GetValue(null))
-                {
+            try {
+                if (!(bool)editorsInitializedField.GetValue(null)) {
                     MethodInfo rebuildEditorsMethod =
                         attributeType.GetMethod("Rebuild", BindingFlags.Static | BindingFlags.NonPublic);
                     rebuildEditorsMethod.Invoke(null, null);
@@ -63,8 +56,7 @@ namespace AwAVR.VRCSDKPlus
                 OverrideEditor(typeof(VRCExpressionParameters), typeof(VRCParamsPlus));
                 OverrideEditor(typeof(VRCExpressionsMenu), typeof(VRCMenuPlus));
             }
-            catch (Exception e)
-            {
+            catch (Exception e) {
                 Debug.LogException(e);
                 Debug.LogError("[VRCSDK+] Failed to override editors!");
             }

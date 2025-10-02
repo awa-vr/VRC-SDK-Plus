@@ -4,20 +4,15 @@ using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 
-namespace AwAVR.VRCSDKPlus
-{
-    internal sealed class QuickAvatar
-    {
-
+namespace AwAVR.VRCSDKPlus {
+    internal sealed class QuickAvatar {
         [MenuItem("CONTEXT/VRCAvatarDescriptor/[SDK+] Quick Setup", false, 650)]
-        private static void QuickSetup(MenuCommand command)
-        {
+        private static void QuickSetup(MenuCommand command) {
             VRCAvatarDescriptor desc = (VRCAvatarDescriptor)command.context;
             Animator ani = desc.GetComponent<Animator>();
             SerializedObject serialized = new SerializedObject(desc);
 
-            if (ani)
-            {
+            if (ani) {
                 Transform leftEye = ani.GetBoneTransform(HumanBodyBones.LeftEye);
                 Transform rightEye = ani.GetBoneTransform(HumanBodyBones.RightEye);
 
@@ -28,8 +23,7 @@ namespace AwAVR.VRCSDKPlus
 
                 #region View Position
 
-                if (leftEye && rightEye)
-                {
+                if (leftEye && rightEye) {
                     Transform betterLeft = leftEye.parent.Find("LeftEye");
                     Transform betterRight = rightEye.parent.Find("RightEye");
                     leftEye = betterLeft ? betterLeft : leftEye;
@@ -39,8 +33,7 @@ namespace AwAVR.VRCSDKPlus
                     worldYPosition = added.y;
                     worldZPosition = added.z;
                 }
-                else
-                {
+                else {
                     Vector3 headPosition = ani.GetBoneTransform(HumanBodyBones.Head).position;
                     worldXPosition = headPosition.x;
                     worldYPosition = headPosition.y + ((headPosition.y - root.position.y) * 1.0357f -
@@ -59,8 +52,7 @@ namespace AwAVR.VRCSDKPlus
 
                 #region Eyes
 
-                if (leftEye && rightEye)
-                {
+                if (leftEye && rightEye) {
                     SerializedProperty eyes = serialized.FindProperty("customEyeLookSettings");
                     serialized.FindProperty("enableEyeLook").boolValue = true;
 
@@ -82,8 +74,7 @@ namespace AwAVR.VRCSDKPlus
                     SerializedProperty down = eyes.FindPropertyRelative("eyesLookingDown");
                     SerializedProperty left = eyes.FindPropertyRelative("eyesLookingLeft");
 
-                    void SetLeftAndRight(SerializedProperty p, Quaternion v)
-                    {
+                    void SetLeftAndRight(SerializedProperty p, Quaternion v) {
                         p.FindPropertyRelative("left").quaternionValue = v;
                         p.FindPropertyRelative("right").quaternionValue = v;
                     }
@@ -98,16 +89,13 @@ namespace AwAVR.VRCSDKPlus
                     #region Blinking
 
                     SkinnedMeshRenderer body = null;
-                    for (int i = 0; i < desc.transform.childCount; i++)
-                    {
+                    for (int i = 0; i < desc.transform.childCount; i++) {
                         if (body = desc.transform.GetChild(i).GetComponent<SkinnedMeshRenderer>())
                             break;
                     }
 
-                    if (body && body.sharedMesh)
-                    {
-                        for (int i = 0; i < body.sharedMesh.blendShapeCount; i++)
-                        {
+                    if (body && body.sharedMesh) {
+                        for (int i = 0; i < body.sharedMesh.blendShapeCount; i++) {
                             if (body.sharedMesh.GetBlendShapeName(i) != "Blink") continue;
 
                             eyes.FindPropertyRelative("eyelidType").enumValueIndex = 2;
@@ -133,8 +121,7 @@ namespace AwAVR.VRCSDKPlus
             EditorApplication.delayCall += ForceCallAutoLipSync;
         }
 
-        private static void ForceCallAutoLipSync()
-        {
+        private static void ForceCallAutoLipSync() {
             EditorApplication.delayCall -= ForceCallAutoLipSync;
 
             var descriptorEditor =
@@ -143,8 +130,7 @@ namespace AwAVR.VRCSDKPlus
                 Type.GetType(
                     "AvatarDescriptorEditor3, VRC.SDK3A.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
 
-            if (descriptorEditor == null)
-            {
+            if (descriptorEditor == null) {
                 Debug.LogWarning("AvatarDescriptorEditor3 Type couldn't be found!");
                 return;
             }
@@ -153,6 +139,5 @@ namespace AwAVR.VRCSDKPlus
             descriptorEditor.GetMethod("AutoDetectLipSync", BindingFlags.NonPublic | BindingFlags.Instance)
                 .Invoke(tempEditor, null);
         }
-
     }
 }

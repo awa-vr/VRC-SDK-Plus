@@ -6,10 +6,8 @@ using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
-namespace AwAVR.VRCSDKPlus
-{
-    internal sealed class VRCMenuPlus : Editor, IHasCustomMenu
-    {
+namespace AwAVR.VRCSDKPlus {
+    internal sealed class VRCMenuPlus : Editor, IHasCustomMenu {
         private static bool _editorActive = true;
         private static VRCAvatarDescriptor _avatar;
         private VRCAvatarDescriptor[] _validAvatars;
@@ -27,30 +25,25 @@ namespace AwAVR.VRCSDKPlus
 
         #region Initialization
 
-        private void ReInitializeAll()
-        {
+        private void ReInitializeAll() {
             CheckAvatar();
             CheckMenu();
             InitializeList();
         }
 
-        private void CheckAvatar()
-        {
+        private void CheckAvatar() {
             _validAvatars = FindObjectsOfType<VRCAvatarDescriptor>();
             if (_validAvatars.Length == 0) _avatar = null;
             else if (!_avatar) _avatar = _validAvatars[0];
         }
 
-        private void CheckMenu()
-        {
+        private void CheckMenu() {
             var currentMenu = target as VRCExpressionsMenu;
             if (!currentMenu || currentMenu == _lastMenu) return;
 
-            if (_currentNode != null && MenuHistory.Last != _currentNode)
-            {
+            if (_currentNode != null && MenuHistory.Last != _currentNode) {
                 var node = _currentNode.Next;
-                while (node != null)
-                {
+                while (node != null) {
                     var nextNode = node.Next;
                     MenuHistory.Remove(node);
                     node = nextNode;
@@ -61,13 +54,11 @@ namespace AwAVR.VRCSDKPlus
             _currentNode = MenuHistory.AddLast(currentMenu);
         }
 
-        private void InitializeList()
-        {
+        private void InitializeList() {
             var l = serializedObject.FindProperty("controls");
             _controlsList = new ReorderableList(serializedObject, l, true, true, true, false);
             _controlsList.onCanAddCallback += reorderableList => reorderableList.count < 8;
-            _controlsList.onAddCallback = _ =>
-            {
+            _controlsList.onAddCallback = _ => {
                 var controlsProp = _controlsList.serializedProperty;
                 var index = controlsProp.arraySize++;
                 _controlsList.index = index;
@@ -82,10 +73,8 @@ namespace AwAVR.VRCSDKPlus
                 c.FindPropertyRelative("subParameters").ClearArray();
                 c.FindPropertyRelative("value").floatValue = 1;
             };
-            _controlsList.drawHeaderCallback = rect =>
-            {
-                if (_isMoving && Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
-                {
+            _controlsList.drawHeaderCallback = rect => {
+                if (_isMoving && Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape) {
                     _isMoving = false;
                     Repaint();
                 }
@@ -127,8 +116,7 @@ namespace AwAVR.VRCSDKPlus
                 bool hasIndex = _controlsList.TryGetActiveIndex(out int index);
                 bool hasFocus = _controlsList.HasKeyboardControl();
                 if (!hasIndex) index = _controlsList.count;
-                using (new EditorGUI.DisabledScope(isEmpty || !hasFocus || !hasIndex))
-                {
+                using (new EditorGUI.DisabledScope(isEmpty || !hasFocus || !hasIndex)) {
                     #region Copy
 
                     Helpers.w_MakeRectLinkCursor(copyRect);
@@ -141,8 +129,7 @@ namespace AwAVR.VRCSDKPlus
 
                     #region Duplicate
 
-                    using (new EditorGUI.DisabledScope(isFull))
-                    {
+                    using (new EditorGUI.DisabledScope(isFull)) {
                         Helpers.w_MakeRectLinkCursor(duplicateRect);
                         if (GUI.Button(duplicateRect,
                                 isFull
@@ -157,11 +144,9 @@ namespace AwAVR.VRCSDKPlus
 
                 #region Paste
 
-                using (new EditorGUI.DisabledScope(!CanPasteControl()))
-                {
+                using (new EditorGUI.DisabledScope(!CanPasteControl())) {
                     Helpers.w_MakeRectLinkCursor(pasteRect);
-                    if (GUI.Button(pasteRect, Toolbox.GUIContent.Paste, GUI.skin.label))
-                    {
+                    if (GUI.Button(pasteRect, Toolbox.GUIContent.Paste, GUI.skin.label)) {
                         var menu = new GenericMenu();
                         menu.AddItem(new GUIContent("Paste values"), false,
                             isEmpty || !hasFocus
@@ -181,8 +166,7 @@ namespace AwAVR.VRCSDKPlus
 
                 #region Move
 
-                using (new EditorGUI.DisabledScope((_isMoving && isFull) || (!_isMoving && (!hasFocus || isEmpty))))
-                {
+                using (new EditorGUI.DisabledScope((_isMoving && isFull) || (!_isMoving && (!hasFocus || isEmpty)))) {
                     Helpers.w_MakeRectLinkCursor(moveRect);
                     if (GUI.Button(moveRect,
                             _isMoving
@@ -190,8 +174,7 @@ namespace AwAVR.VRCSDKPlus
                                     ? new GUIContent(Toolbox.GUIContent.Place)
                                         { tooltip = Toolbox.GUIContent.MenuFullTooltip }
                                     : Toolbox.GUIContent.Place
-                                : Toolbox.GUIContent.Move, GUI.skin.label))
-                    {
+                                : Toolbox.GUIContent.Move, GUI.skin.label)) {
                         if (!_isMoving) MoveControl(index);
                         else PlaceControl(index);
                     }
@@ -199,8 +182,7 @@ namespace AwAVR.VRCSDKPlus
 
                 #endregion
             };
-            _controlsList.drawElementCallback = (rect2, index, _, focused) =>
-            {
+            _controlsList.drawElementCallback = (rect2, index, _, focused) => {
                 if (!(index < l.arraySize && index >= 0)) return;
                 var controlProp = l.GetArrayElementAtIndex(index);
                 var controlType = controlProp.FindPropertyRelative("type").ToControlType();
@@ -232,25 +214,21 @@ namespace AwAVR.VRCSDKPlus
 
                 var e = Event.current;
 
-                if (controlType == VRCExpressionsMenu.Control.ControlType.SubMenu)
-                {
-                    if (e.clickCount == 2 && e.type == EventType.MouseDown && rect2.Contains(e.mousePosition))
-                    {
+                if (controlType == VRCExpressionsMenu.Control.ControlType.SubMenu) {
+                    if (e.clickCount == 2 && e.type == EventType.MouseDown && rect2.Contains(e.mousePosition)) {
                         var sm = controlProp.FindPropertyRelative("subMenu").objectReferenceValue;
                         if (sm) Selection.activeObject = sm;
                         e.Use();
                     }
                 }
 
-                if (e.type == EventType.ContextClick && rect2.Contains(e.mousePosition))
-                {
+                if (e.type == EventType.ContextClick && rect2.Contains(e.mousePosition)) {
                     e.Use();
                     var menu = new GenericMenu();
                     menu.AddItem(new GUIContent("Cut"), false, () => MoveControl(index));
                     menu.AddItem(new GUIContent("Copy"), false, () => CopyControl(index));
                     if (!CanPasteControl()) menu.AddDisabledItem(new GUIContent("Paste"));
-                    else
-                    {
+                    else {
                         menu.AddItem(new GUIContent("Paste/Values"), false, () => PasteControl(index, false));
                         menu.AddItem(new GUIContent("Paste/As New"), false, () => PasteControl(index, true));
                     }
@@ -263,8 +241,7 @@ namespace AwAVR.VRCSDKPlus
             };
         }
 
-        private VRCExpressionParameters.Parameter FetchParameter(string name)
-        {
+        private VRCExpressionParameters.Parameter FetchParameter(string name) {
             if (!_avatar || !_avatar.expressionParameters) return null;
             var par = _avatar.expressionParameters;
             return par.parameters?.FirstOrDefault(p => p.name == name);
@@ -272,8 +249,7 @@ namespace AwAVR.VRCSDKPlus
 
         #endregion
 
-        public override void OnInspectorGUI()
-        {
+        public override void OnInspectorGUI() {
             serializedObject.Update();
             HandleControlEvents();
             DrawHistory();
@@ -282,44 +258,34 @@ namespace AwAVR.VRCSDKPlus
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void OnEnable()
-        {
+        private void OnEnable() {
             ReInitializeAll();
         }
 
-        private void DrawHistory()
-        {
-            using (new GUILayout.HorizontalScope("helpbox"))
-            {
-                void CheckHistory()
-                {
-                    for (LinkedListNode<VRCExpressionsMenu> node = MenuHistory.First; node != null;)
-                    {
+        private void DrawHistory() {
+            using (new GUILayout.HorizontalScope("helpbox")) {
+                void CheckHistory() {
+                    for (LinkedListNode<VRCExpressionsMenu> node = MenuHistory.First; node != null;) {
                         LinkedListNode<VRCExpressionsMenu> next = node.Next;
                         if (node.Value == null) MenuHistory.Remove(node);
                         node = next;
                     }
                 }
 
-                void SetCurrentNode(LinkedListNode<VRCExpressionsMenu> node)
-                {
+                void SetCurrentNode(LinkedListNode<VRCExpressionsMenu> node) {
                     if (node.Value == null) return;
                     _currentNode = node;
                     Selection.activeObject = _lastMenu = _currentNode.Value;
                 }
 
-                using (new EditorGUI.DisabledScope(_currentNode.Previous == null))
-                {
-                    using (new EditorGUI.DisabledScope(_currentNode.Previous == null))
-                    {
-                        if (Helpers.ClickableButton("<<", GUILayout.ExpandWidth(false)))
-                        {
+                using (new EditorGUI.DisabledScope(_currentNode.Previous == null)) {
+                    using (new EditorGUI.DisabledScope(_currentNode.Previous == null)) {
+                        if (Helpers.ClickableButton("<<", GUILayout.ExpandWidth(false))) {
                             CheckHistory();
                             SetCurrentNode(MenuHistory.First);
                         }
 
-                        if (Helpers.ClickableButton("<", GUILayout.ExpandWidth(false)))
-                        {
+                        if (Helpers.ClickableButton("<", GUILayout.ExpandWidth(false))) {
                             CheckHistory();
                             SetCurrentNode(_currentNode.Previous);
                         }
@@ -330,16 +296,13 @@ namespace AwAVR.VRCSDKPlus
                         GUILayout.ExpandWidth(true)))
                     EditorGUIUtility.PingObject(_lastMenu);
 
-                using (new EditorGUI.DisabledScope(_currentNode.Next == null))
-                {
-                    if (Helpers.ClickableButton(">", GUILayout.ExpandWidth(false)))
-                    {
+                using (new EditorGUI.DisabledScope(_currentNode.Next == null)) {
+                    if (Helpers.ClickableButton(">", GUILayout.ExpandWidth(false))) {
                         CheckHistory();
                         SetCurrentNode(_currentNode.Next);
                     }
 
-                    if (Helpers.ClickableButton(">>", GUILayout.ExpandWidth(false)))
-                    {
+                    if (Helpers.ClickableButton(">>", GUILayout.ExpandWidth(false))) {
                         CheckHistory();
                         SetCurrentNode(MenuHistory.Last);
                     }
@@ -347,8 +310,7 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        private void DrawHead()
-        {
+        private void DrawHead() {
             #region Avatar Selector
 
             // Generate name string array
@@ -361,8 +323,7 @@ namespace AwAVR.VRCSDKPlus
             #endregion
         }
 
-        void DrawBody()
-        {
+        void DrawBody() {
             if (_controlsList == null)
                 InitializeList();
 
@@ -386,16 +347,13 @@ namespace AwAVR.VRCSDKPlus
                 ControlRenderer.DrawControl(control, expressionParameters);
         }
 
-        private void HandleControlEvents()
-        {
+        private void HandleControlEvents() {
             if (!_controlsList.HasKeyboardControl()) return;
             if (!_controlsList.TryGetActiveIndex(out int index)) return;
             bool fullMenu = _controlsList.count >= 8;
 
-            bool WarnIfFull()
-            {
-                if (fullMenu)
-                {
+            bool WarnIfFull() {
+                if (fullMenu) {
                     Debug.LogWarning(Toolbox.GUIContent.MenuFullTooltip);
                     return true;
                 }
@@ -423,8 +381,7 @@ namespace AwAVR.VRCSDKPlus
 
         #region Control Methods
 
-        private void CopyControl(int index)
-        {
+        private void CopyControl(int index) {
             EditorGUIUtility.systemCopyBuffer =
                 Toolbox.Strings.ClipboardPrefixControl +
                 JsonUtility.ToJson(((VRCExpressionsMenu)target).controls[index]);
@@ -433,11 +390,9 @@ namespace AwAVR.VRCSDKPlus
         private static bool CanPasteControl() =>
             EditorGUIUtility.systemCopyBuffer.StartsWith(Toolbox.Strings.ClipboardPrefixControl);
 
-        private void PasteControl(int index, bool asNew)
-        {
+        private void PasteControl(int index, bool asNew) {
             if (!CanPasteControl()) return;
-            if (!asNew)
-            {
+            if (!asNew) {
                 var control = JsonUtility.FromJson<VRCExpressionsMenu.Control>(
                     EditorGUIUtility.systemCopyBuffer.Substring(Toolbox.Strings.ClipboardPrefixControl
                         .Length));
@@ -446,20 +401,17 @@ namespace AwAVR.VRCSDKPlus
                 _lastMenu.controls[index] = control;
                 EditorUtility.SetDirty(_lastMenu);
             }
-            else
-            {
+            else {
                 var newControl = JsonUtility.FromJson<VRCExpressionsMenu.Control>(
                     EditorGUIUtility.systemCopyBuffer.Substring(Toolbox.Strings.ClipboardPrefixControl
                         .Length));
 
                 Undo.RecordObject(target, "Insert control as new");
-                if (_lastMenu.controls.Count <= 0)
-                {
+                if (_lastMenu.controls.Count <= 0) {
                     _lastMenu.controls.Add(newControl);
                     _controlsList.index = 0;
                 }
-                else
-                {
+                else {
                     var insertIndex = index + 1;
                     if (insertIndex < 0) insertIndex = 0;
                     _lastMenu.controls.Insert(insertIndex, newControl);
@@ -470,8 +422,7 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        private void DuplicateControl(int index)
-        {
+        private void DuplicateControl(int index) {
             var controlsProp = _controlsList.serializedProperty;
             controlsProp.InsertArrayElementAtIndex(index);
             _controlsList.index = index + 1;
@@ -492,44 +443,39 @@ namespace AwAVR.VRCSDKPlus
             if (controlType != VRCExpressionsMenu.Control.ControlType.Button &&
                 controlType != VRCExpressionsMenu.Control.ControlType.Toggle) return;
 
-            if (matchedParameter.valueType == VRCExpressionParameters.ValueType.Bool)
-            {
+            if (matchedParameter.valueType == VRCExpressionParameters.ValueType.Bool) {
                 menuParameter.FindPropertyRelative("name").stringValue =
                     Toolbox.GenerateUniqueString(parName, s => s != parName, false);
             }
-            else
-            {
+            else {
                 var controlValueProp = newElement.FindPropertyRelative("value");
                 if (Mathf.RoundToInt(controlValueProp.floatValue) == controlValueProp.floatValue)
                     controlValueProp.floatValue++;
             }
         }
 
-        private void DeleteControl(int index)
-        {
-            if (_controlsList.index == index) _controlsList.index--;
+        private void DeleteControl(int index) {
+            if (_controlsList.index == index)
+                _controlsList.index--;
+
             _controlsList.serializedProperty.DeleteArrayElementAtIndex(index);
         }
 
-        private void MoveControl(int index)
-        {
+        private void MoveControl(int index) {
             _isMoving = true;
             _moveSourceMenu = _lastMenu;
             _moveTargetControl = _lastMenu.controls[index];
         }
 
-        private void PlaceControl(int index)
-        {
+        private void PlaceControl(int index) {
             _isMoving = false;
-            if (_moveSourceMenu && _moveTargetControl != null)
-            {
+            if (_moveSourceMenu && _moveTargetControl != null) {
                 Undo.RecordObject(target, "Move control");
                 Undo.RecordObject(_moveSourceMenu, "Move control");
 
                 if (_lastMenu.controls.Count <= 0)
                     _lastMenu.controls.Add(_moveTargetControl);
-                else
-                {
+                else {
                     var insertIndex = index + 1;
                     if (insertIndex < 0) insertIndex = 0;
                     _lastMenu.controls.Insert(insertIndex, _moveTargetControl);
@@ -552,22 +498,18 @@ namespace AwAVR.VRCSDKPlus
             !Toolbox.Preferences.CompactMode;
 
         [MenuItem("CONTEXT/VRCExpressionsMenu/[SDK+] Toggle Editor", false, 899)]
-        private static void ToggleEditor()
-        {
+        private static void ToggleEditor() {
             _editorActive = !_editorActive;
             var targetType = Helpers.ExtendedGetType("VRCExpressionsMenu");
-            if (targetType == null)
-            {
+            if (targetType == null) {
                 Debug.LogError("[VRCSDK+] VRCExpressionsMenu was not found! Could not apply custom editor.");
                 return;
             }
 
             if (_editorActive) AutomatedMethods.OverrideEditor(targetType, typeof(VRCMenuPlus));
-            else
-            {
+            else {
                 var menuEditor = Helpers.ExtendedGetType("VRCExpressionsMenuEditor");
-                if (menuEditor == null)
-                {
+                if (menuEditor == null) {
                     Debug.LogWarning(
                         "[VRCSDK+] VRCExpressionsMenuEditor was not found! Could not apply custom editor.");
                     return;
@@ -577,5 +519,5 @@ namespace AwAVR.VRCSDKPlus
             }
             //else OverrideEditor(typeof(VRCExpressionsMenu), Type.GetType("VRCExpressionsMenuEditor, Assembly-CSharp-Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"));
         }
-}
+    }
 }

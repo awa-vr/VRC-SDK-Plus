@@ -13,26 +13,19 @@ using AnimatorController = UnityEditor.Animations.AnimatorController;
 using AnimatorControllerParameter = UnityEngine.AnimatorControllerParameter;
 using AnimatorControllerParameterType = UnityEngine.AnimatorControllerParameterType;
 
-namespace AwAVR.VRCSDKPlus
-{
-    internal sealed class VRCParamsPlus : Editor
-    {
+namespace AwAVR.VRCSDKPlus {
+    internal sealed class VRCParamsPlus : Editor {
         private static int _maxMemoryCost;
 
-        private static int MaxMemoryCost
-        {
-            get
-            {
-                if (_maxMemoryCost == 0)
-                {
-                    try
-                    {
+        private static int MaxMemoryCost {
+            get {
+                if (_maxMemoryCost == 0) {
+                    try {
                         _maxMemoryCost = (int)typeof(VRCExpressionParameters)
                             .GetField("MAX_PARAMETER_COST", BindingFlags.Static | BindingFlags.Public)
                             .GetValue(null);
                     }
-                    catch
-                    {
+                    catch {
                         Debug.LogError("Failed to dynamically get MAX_PARAMETER_COST. Falling back to 256");
                         _maxMemoryCost = 256;
                     }
@@ -57,14 +50,14 @@ namespace AwAVR.VRCSDKPlus
 
         private static VRCExpressionParameters _mergeParams;
 
-        public override void OnInspectorGUI()
-        {
+        public override void OnInspectorGUI() {
             EditorGUI.BeginChangeCheck();
             using (new GUILayout.VerticalScope("helpbox"))
                 Core.GetAvatar(ref VRCSDKPlus.GetAvatarRef(), ref VRCSDKPlus.GetValidAvatarsRef());
 
             CalculateTotalCost();
             ShowTotalMemory();
+            DrawRefreshParemetersButton();
 
             _canCleanup = false;
             serializedObject.Update();
@@ -72,35 +65,27 @@ namespace AwAVR.VRCSDKPlus
             _parametersOrderList.DoLayoutList();
             serializedObject.ApplyModifiedProperties();
 
-            if (_canCleanup)
-            {
-                using (new GUILayout.HorizontalScope("helpbox"))
-                {
+            if (_canCleanup) {
+                using (new GUILayout.HorizontalScope("helpbox")) {
                     GUILayout.Label("Cleanup Invalid, Blank, and Duplicate Parameters");
-                    if (Helpers.ClickableButton("Cleanup"))
-                    {
+                    if (Helpers.ClickableButton("Cleanup")) {
                         VRCSDKPlus.RefreshValidParameters();
-                        _parameterList.IterateArray((i, p) =>
-                        {
+                        _parameterList.IterateArray((i, p) => {
                             var name = p.FindPropertyRelative("name").stringValue;
-                            if (string.IsNullOrEmpty(name))
-                            {
+                            if (string.IsNullOrEmpty(name)) {
                                 Helpers.GreenLog($"Deleted blank parameter at index {i}");
                                 _parameterList.DeleteArrayElementAtIndex(i);
                                 return false;
                             }
 
-                            if (VRCSDKPlus.GetAvatar() && VRCSDKPlus.GetValidParameters().All(p2 => p2.name != name))
-                            {
+                            if (VRCSDKPlus.GetAvatar() && VRCSDKPlus.GetValidParameters().All(p2 => p2.name != name)) {
                                 Helpers.GreenLog($"Deleted invalid parameter {name}");
                                 _parameterList.DeleteArrayElementAtIndex(i);
                                 return false;
                             }
 
-                            _parameterList.IterateArray((j, p2) =>
-                            {
-                                if (name == p2.FindPropertyRelative("name").stringValue)
-                                {
+                            _parameterList.IterateArray((j, p2) => {
+                                if (name == p2.FindPropertyRelative("name").stringValue) {
                                     Helpers.GreenLog($"Deleted duplicate parameter {name}");
                                     _parameterList.DeleteArrayElementAtIndex(j);
                                 }
@@ -122,17 +107,13 @@ namespace AwAVR.VRCSDKPlus
             using (new GUILayout.HorizontalScope("helpbox"))
                 _mergeParams = (VRCExpressionParameters)EditorGUILayout.ObjectField("Merge Parameters", null,
                     typeof(VRCExpressionParameters), true);
-            if (EditorGUI.EndChangeCheck())
-            {
-                if (_mergeParams)
-                {
-                    if (_mergeParams.parameters != null)
-                    {
+            if (EditorGUI.EndChangeCheck()) {
+                if (_mergeParams) {
+                    if (_mergeParams.parameters != null) {
                         VRCExpressionParameters myParams = (VRCExpressionParameters)target;
                         Undo.RecordObject(myParams, "Merge Parameters");
                         myParams.parameters = myParams.parameters.Concat(_mergeParams.parameters.Select(p =>
-                            new VRCExpressionParameters.Parameter()
-                            {
+                            new VRCExpressionParameters.Parameter() {
                                 defaultValue = p.defaultValue,
                                 name = p.name,
                                 networkSynced = p.networkSynced,
@@ -145,26 +126,27 @@ namespace AwAVR.VRCSDKPlus
                 }
             }
 
+            DrawRefreshParemetersButton();
             ShowTotalMemory();
 
             if (EditorGUI.EndChangeCheck()) RefreshAllParameterStatus();
         }
 
-        private void ShowTotalMemory()
-        {
-            try
-            {
-                using (new EditorGUILayout.HorizontalScope("helpbox"))
-                {
+        private void DrawRefreshParemetersButton() {
+            if (GUILayout.Button("Refresh Parameters")) {
+                VRCSDKPlus.RefreshAvatarInfo();
+            }
+        }
+
+        private void ShowTotalMemory() {
+            try {
+                using (new EditorGUILayout.HorizontalScope("helpbox")) {
                     GUILayout.FlexibleSpace();
-                    using (new GUILayout.VerticalScope())
-                    {
-                        using (new GUILayout.HorizontalScope())
-                        {
+                    using (new GUILayout.VerticalScope()) {
+                        using (new GUILayout.HorizontalScope()) {
                             GUILayout.FlexibleSpace();
                             GUILayout.Label("Total Memory");
-                            GUIContent help = new GUIContent
-                            {
+                            GUIContent help = new GUIContent {
                                 image = EditorGUIUtility.IconContent("d_Help").image,
                                 tooltip =
                                     $"VRChat only allows {MaxMemoryCost} synced parameter bits on an avatar. Only synced parameters in the VRC Expression Parameters are counted towards this." +
@@ -179,8 +161,7 @@ namespace AwAVR.VRCSDKPlus
                             GUILayout.FlexibleSpace();
                         }
 
-                        using (new GUILayout.HorizontalScope())
-                        {
+                        using (new GUILayout.HorizontalScope()) {
                             GUILayout.FlexibleSpace();
 
                             // progress bar
@@ -200,14 +181,12 @@ namespace AwAVR.VRCSDKPlus
                     GUILayout.FlexibleSpace();
                 }
             }
-            catch
-            {
+            catch {
                 // ignored
             }
         }
 
-        private void OnEnable()
-        {
+        private void OnEnable() {
             VRCSDKPlus.InitConstants();
             VRCSDKPlus.RefreshAvatar(a => a.expressionParameters == target);
 
@@ -216,8 +195,7 @@ namespace AwAVR.VRCSDKPlus
             RefreshAllParameterStatus();
         }
 
-        private void DrawElement(Rect rect, int index, bool active, bool focused)
-        {
+        private void DrawElement(Rect rect, int index, bool active, bool focused) {
             if (!(index < _parameterList.arraySize && index >= 0)) return;
 
             var screenRect = GUIUtility.GUIToScreenRect(rect);
@@ -248,8 +226,7 @@ namespace AwAVR.VRCSDKPlus
             rect.height = 18;
 
 
-            Rect UseNext(float width, bool fixedWidth = false, float position = -1, bool fixedPosition = false)
-            {
+            Rect UseNext(float width, bool fixedWidth = false, float position = -1, bool fixedPosition = false) {
                 Rect currentRect = rect;
                 currentRect.width = fixedWidth ? width : width * rect.width / 100;
                 currentRect.height = rect.height;
@@ -261,8 +238,7 @@ namespace AwAVR.VRCSDKPlus
             }
 
             Rect UseEnd(ref Rect r, float width, bool fixedWidth = false, float positionOffset = -1,
-                bool fixedPosition = false)
-            {
+                bool fixedPosition = false) {
                 Rect returnRect = r;
                 returnRect.width = fixedWidth ? width : width * r.width / 100;
                 float positionAdjust = positionOffset == -1 ? 0 :
@@ -293,32 +269,26 @@ namespace AwAVR.VRCSDKPlus
             #endregion
 
             using (new EditorGUI.DisabledScope(!string.IsNullOrEmpty(_searchValue) &&
-                                               !Regex.IsMatch(name.stringValue, $@"(?i){_searchValue}")))
-            {
+                                               !Regex.IsMatch(name.stringValue, $@"(?i){_searchValue}"))) {
                 //Hacky way to avoid proper UI Layout
                 string parameterFieldName = $"namefield{index}";
 
                 using (new EditorGUI.DisabledScope(VRCSDKPlus.GetValidParameters().Length == 0))
-                    if (GUI.Button(dropdownRect, GUIContent.none, EditorStyles.popup))
-                    {
+                    if (GUI.Button(dropdownRect, GUIContent.none, EditorStyles.popup)) {
                         var filteredParameters = VRCSDKPlus.GetValidParameters().Where(conParam =>
                             !_parameterList.IterateArray((_, prop) =>
                                 prop.FindPropertyRelative("name").stringValue == conParam.name)).ToArray();
-                        if (filteredParameters.Any())
-                        {
+                        if (filteredParameters.Any()) {
                             Toolbox.CustomDropdown<AnimatorControllerParameter> textDropdown =
                                 new Toolbox.CustomDropdown<AnimatorControllerParameter>(null,
-                                    filteredParameters, item =>
-                                    {
-                                        using (new GUILayout.HorizontalScope())
-                                        {
+                                    filteredParameters, item => {
+                                        using (new GUILayout.HorizontalScope()) {
                                             GUILayout.Label(item.value.name);
                                             GUILayout.Label(item.value.type.ToString(),
                                                 Toolbox.Styles.Label.TypeLabel,
                                                 GUILayout.ExpandWidth(false));
                                         }
-                                    }, (_, conParam) =>
-                                    {
+                                    }, (_, conParam) => {
                                         name.stringValue = conParam.name;
                                         name.serializedObject.ApplyModifiedProperties();
                                         RefreshAllParameterStatus();
@@ -339,23 +309,17 @@ namespace AwAVR.VRCSDKPlus
 
                 if (HasSyncingOption) EditorGUI.PropertyField(syncedRect, synced, GUIContent.none);
 
-                if (parameterAddable)
-                {
-                    using (var change = new EditorGUI.ChangeCheckScope())
-                    {
+                if (parameterAddable) {
+                    using (var change = new EditorGUI.ChangeCheckScope()) {
                         Helpers.w_MakeRectLinkCursor(addRect);
                         int dummy = EditorGUI.IntPopup(addRect, -1, VRCSDKPlus.GetValidPlayables(),
                             VRCSDKPlus.GetValidPlayableIndexes());
-                        if (change.changed)
-                        {
+                        if (change.changed) {
                             var playable = (VRCAvatarDescriptor.AnimLayerType)dummy;
-                            if (VRCSDKPlus.GetAvatar().GetPlayableLayer(playable, out AnimatorController c))
-                            {
-                                if (c.parameters.All(p => p.name != name.stringValue))
-                                {
+                            if (VRCSDKPlus.GetAvatar().GetPlayableLayer(playable, out AnimatorController c)) {
+                                if (c.parameters.All(p => p.name != name.stringValue)) {
                                     AnimatorControllerParameterType paramType;
-                                    switch (valueType.enumValueIndex)
-                                    {
+                                    switch (valueType.enumValueIndex) {
                                         case 0:
                                             paramType = AnimatorControllerParameterType.Int;
                                             break;
@@ -367,8 +331,7 @@ namespace AwAVR.VRCSDKPlus
                                             break;
                                     }
 
-                                    c.AddParameter(new AnimatorControllerParameter()
-                                    {
+                                    c.AddParameter(new AnimatorControllerParameter() {
                                         name = name.stringValue,
                                         type = paramType,
                                         defaultFloat = defaultValue.floatValue,
@@ -393,17 +356,18 @@ namespace AwAVR.VRCSDKPlus
                     GUI.Label(warnRect, new GUIContent(VRCSDKPlus.GetYellowWarnIcon()) { tooltip = warnMsg });
 
 #if PARAMETER_RENAMER_INSTALLED
-                if (!hasWarning)
-                {
+                if (!hasWarning) {
                     var editIcon = new GUIContent(EditorGUIUtility.IconContent("d_editicon.sml"));
-                    if (GUI.Button(warnRect, new GUIContent(editIcon), EditorStyles.label))
-                    {
-                        try
-                        {
+                    if (GUI.Button(warnRect, new GUIContent(editIcon), EditorStyles.label)) {
+                        try {
+#if PARAMETER_RENAMER_1_4_0
+                            ParameterRenamer.Show(name.stringValue, VRCSDKPlus.GetAvatar(),
+                                runAfterRenameFunction: VRCSDKPlus.RefreshAvatarInfo);
+#else
                             ParameterRenamer.Show(name.stringValue, VRCSDKPlus.GetAvatar());
+#endif
                         }
-                        catch (Exception exception)
-                        {
+                        catch (Exception exception) {
                             Console.WriteLine(exception);
                             throw;
                         }
@@ -411,8 +375,7 @@ namespace AwAVR.VRCSDKPlus
                 }
 #endif
 
-                switch (valueType.enumValueIndex)
-                {
+                switch (valueType.enumValueIndex) {
                     case 2:
                         EditorGUI.BeginChangeCheck();
                         int dummy = EditorGUI.Popup(defaultRect, defaultValue.floatValue == 0 ? 0 : 1,
@@ -432,8 +395,7 @@ namespace AwAVR.VRCSDKPlus
             }
 
             var e = Event.current;
-            if (e.type == EventType.ContextClick && contextRect.Contains(e.mousePosition))
-            {
+            if (e.type == EventType.ContextClick && contextRect.Contains(e.mousePosition)) {
                 e.Use();
                 var menu = new GenericMenu();
                 menu.AddItem(new GUIContent("Duplicate"), false, () => DuplicateParameter(index));
@@ -444,8 +406,7 @@ namespace AwAVR.VRCSDKPlus
         }
 
 
-        private void DrawHeader(Rect rect)
-        {
+        private void DrawHeader(Rect rect) {
             #region Rects
 
             /*rect.y += 1;
@@ -493,8 +454,7 @@ namespace AwAVR.VRCSDKPlus
             rect.height = 18;
 
 
-            Rect UseNext(float width, bool fixedWidth = false, float position = -1, bool fixedPosition = false)
-            {
+            Rect UseNext(float width, bool fixedWidth = false, float position = -1, bool fixedPosition = false) {
                 Rect currentRect = rect;
                 currentRect.width = fixedWidth ? width : width * rect.width / 100;
                 currentRect.height = rect.height;
@@ -506,8 +466,7 @@ namespace AwAVR.VRCSDKPlus
             }
 
             Rect UseEnd(ref Rect r, float width, bool fixedWidth = false, float positionOffset = -1,
-                bool fixedPosition = false)
-            {
+                bool fixedPosition = false) {
                 Rect returnRect = r;
                 returnRect.width = fixedWidth ? width : width * r.width / 100;
                 float positionAdjust = positionOffset == -1 ? 0 :
@@ -542,8 +501,7 @@ namespace AwAVR.VRCSDKPlus
                 onCancel: () => _searchValue = string.Empty);
             bool isFocused = GUI.GetNameOfFocusedControl() == controlName;
             bool isSearching = isFocused || !string.IsNullOrEmpty(_searchValue);
-            if (isSearching)
-            {
+            if (isSearching) {
                 searchRect = nameRect;
                 searchRect.x += 14;
                 searchRect.width -= 14;
@@ -564,8 +522,7 @@ namespace AwAVR.VRCSDKPlus
 
 
             Helpers.w_MakeRectLinkCursor(searchClearRect);
-            if (GUI.Button(searchClearRect, string.Empty, GUIStyle.none))
-            {
+            if (GUI.Button(searchClearRect, string.Empty, GUIStyle.none)) {
                 _searchValue = string.Empty;
                 if (isFocused) GUI.FocusControl(string.Empty);
             }
@@ -586,8 +543,7 @@ namespace AwAVR.VRCSDKPlus
                     VRCSDKPlus.CenteredLabel);
         }
 
-        private void HandleParameterEvents()
-        {
+        private void HandleParameterEvents() {
             if (!_parametersOrderList.HasKeyboardControl()) return;
             if (!_parametersOrderList.TryGetActiveIndex(out int index)) return;
             if (Toolbox.HasReceivedCommand(Toolbox.EventCommands.Duplicate))
@@ -601,23 +557,19 @@ namespace AwAVR.VRCSDKPlus
         #region Automated Methods
 
         [MenuItem("CONTEXT/VRCExpressionParameters/[SDK+] Toggle Editor", false, 899)]
-        private static void ToggleEditor()
-        {
+        private static void ToggleEditor() {
             _editorActive = !_editorActive;
 
             var targetType = Helpers.ExtendedGetType("VRCExpressionParameters");
-            if (targetType == null)
-            {
+            if (targetType == null) {
                 Debug.LogError("[VRCSDK+] VRCExpressionParameters was not found! Could not apply custom editor.");
                 return;
             }
 
             if (_editorActive) AutomatedMethods.OverrideEditor(targetType, typeof(VRCParamsPlus));
-            else
-            {
+            else {
                 var expressionsEditor = Helpers.ExtendedGetType("VRCExpressionParametersEditor");
-                if (expressionsEditor == null)
-                {
+                if (expressionsEditor == null) {
                     Debug.LogWarning(
                         "[VRCSDK+] VRCExpressionParametersEditor was not found! Could not apply custom editor");
                     return;
@@ -627,11 +579,9 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        private void RefreshAllParameterStatus()
-        {
+        private void RefreshAllParameterStatus() {
             var expressionParameters = (VRCExpressionParameters)target;
-            if (expressionParameters.parameters == null)
-            {
+            if (expressionParameters.parameters == null) {
                 expressionParameters.parameters = Array.Empty<VRCExpressionParameters.Parameter>();
                 EditorUtility.SetDirty(expressionParameters);
             }
@@ -639,8 +589,7 @@ namespace AwAVR.VRCSDKPlus
             var parameters = expressionParameters.parameters;
             _parameterStatus = new ParameterStatus[parameters.Length];
 
-            for (int index = 0; index < parameters.Length; index++)
-            {
+            for (int index = 0; index < parameters.Length; index++) {
                 var exParameter = expressionParameters.parameters[index];
                 AnimatorControllerParameter matchedParameter =
                     VRCSDKPlus.GetValidParameters().FirstOrDefault(conParam => conParam.name == exParameter.name);
@@ -652,8 +601,7 @@ namespace AwAVR.VRCSDKPlus
                 ;
                 bool hasWarning = (VRCSDKPlus.GetAvatarRef() && !parameterIsValid) || parameterEmpty ||
                                   parameterIsDuplicate;
-                _parameterStatus[index] = new ParameterStatus()
-                {
+                _parameterStatus[index] = new ParameterStatus() {
                     ParameterEmpty = parameterEmpty,
                     ParameterAddable = parameterAddable,
                     ParameterIsDuplicate = parameterIsDuplicate,
@@ -663,11 +611,9 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        private void CalculateTotalCost()
-        {
+        private void CalculateTotalCost() {
             _currentCost = 0;
-            for (int i = 0; i < _parameterList.arraySize; i++)
-            {
+            for (int i = 0; i < _parameterList.arraySize; i++) {
                 SerializedProperty p = _parameterList.GetArrayElementAtIndex(i);
                 SerializedProperty synced = p.FindPropertyRelative("networkSynced");
                 if (synced != null && !synced.boolValue) continue;
@@ -675,44 +621,36 @@ namespace AwAVR.VRCSDKPlus
             }
         }
 
-        private void RefreshParametersOrderList()
-        {
-            _parametersOrderList = new ReorderableList(serializedObject, _parameterList, true, true, true, false)
-            {
+        private void RefreshParametersOrderList() {
+            _parametersOrderList = new ReorderableList(serializedObject, _parameterList, true, true, true, false) {
                 drawElementCallback = DrawElement,
                 drawHeaderCallback = DrawHeader
             };
             _parametersOrderList.onReorderCallback += _ => RefreshAllParameterStatus();
-            _parametersOrderList.onAddCallback = _ =>
-            {
+            _parametersOrderList.onAddCallback = _ => {
                 _parameterList.InsertArrayElementAtIndex(_parameterList.arraySize);
                 MakeParameterUnique(_parameterList.arraySize - 1);
             };
         }
 
-        private void DuplicateParameter(int index)
-        {
+        private void DuplicateParameter(int index) {
             _parameterList.InsertArrayElementAtIndex(index);
             MakeParameterUnique(index + 1);
             _parameterList.serializedObject.ApplyModifiedProperties();
             RefreshAllParameterStatus();
         }
 
-        private void DeleteParameter(int index)
-        {
+        private void DeleteParameter(int index) {
             _parameterList.DeleteArrayElementAtIndex(index);
             _parameterList.serializedObject.ApplyModifiedProperties();
             RefreshAllParameterStatus();
         }
 
-        private void MakeParameterUnique(int index)
-        {
+        private void MakeParameterUnique(int index) {
             var newElement = _parameterList.GetArrayElementAtIndex(index);
             var nameProp = newElement.FindPropertyRelative("name");
-            nameProp.stringValue = Toolbox.GenerateUniqueString(nameProp.stringValue, newName =>
-            {
-                for (int i = 0; i < _parameterList.arraySize; i++)
-                {
+            nameProp.stringValue = Toolbox.GenerateUniqueString(nameProp.stringValue, newName => {
+                for (int i = 0; i < _parameterList.arraySize; i++) {
                     if (i == index) continue;
                     var p = _parameterList.GetArrayElementAtIndex(i);
                     if (p.FindPropertyRelative("name").stringValue == newName) return false;
@@ -724,8 +662,7 @@ namespace AwAVR.VRCSDKPlus
 
         #endregion
 
-        private struct ParameterStatus
-        {
+        private struct ParameterStatus {
             internal bool ParameterEmpty;
             internal bool ParameterAddable;
             internal bool ParameterIsDuplicate;
