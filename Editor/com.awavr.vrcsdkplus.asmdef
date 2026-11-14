@@ -24,6 +24,11 @@
             "name": "com.awavr.parameterrenamer",
             "expression": "1.4.0",
             "define": "PARAMETER_RENAMER_1_4_0"
+        },
+        {
+            "name": "com.vrchat.avatars",
+            "expression": "[3.10.6,4)",
+            "define": "VRCSDK_AVATAR_VARIABLE_WIDTH_PARAMETERS"
         }
     ],
     "noEngineReferences": false

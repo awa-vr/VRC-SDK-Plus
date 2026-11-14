@@ -18,6 +18,9 @@ namespace AwAVR.VRCSDKPlus
 
         private static readonly bool HasSyncingOption = typeof(VRCExpressionParameters.Parameter).GetField("networkSynced") != null;
 
+#if VRCSDK_AVATAR_VARIABLE_WIDTH_PARAMETERS
+        private static bool _showAdvancedOptions;
+#endif
         private static bool _editorActive = true;
         private static bool _canCleanup;
 
@@ -74,8 +77,18 @@ namespace AwAVR.VRCSDKPlus
             _canCleanup = false;
             serializedObject.Update();
             HandleParameterEvents();
+            
+            // TODO: Save state using Core v2 settings
+#if VRCSDK_AVATAR_VARIABLE_WIDTH_PARAMETERS
+            EditorGUI.BeginChangeCheck();
+            _showAdvancedOptions = EditorGUILayout.ToggleLeft(
+                new GUIContent("Show Advanced Options", "Show options intended for advanced creators"),
+                _showAdvancedOptions);
+            if (EditorGUI.EndChangeCheck()) Repaint();
+#endif
             _parametersOrderList.DoLayoutList();
             serializedObject.ApplyModifiedProperties();
+            CalculateTotalCost();
 
             if (_canCleanup)
                 using (new GUILayout.HorizontalScope("helpbox"))
@@ -216,6 +229,8 @@ namespace AwAVR.VRCSDKPlus
             var screenRect = GUIUtility.GUIToScreenRect(rect);
             if (screenRect.y > Screen.currentResolution.height || screenRect.y + screenRect.height < 0) return;
 
+            if (index % 2 == 0) EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.15f));
+
             var parameter = _parameterList.GetArrayElementAtIndex(index);
             var name = parameter.FindPropertyRelative("name");
             var valueType = parameter.FindPropertyRelative("valueType");
@@ -223,6 +238,9 @@ namespace AwAVR.VRCSDKPlus
             var saved = parameter.FindPropertyRelative("saved");
             var synced = HasSyncingOption ? parameter.FindPropertyRelative("networkSynced") : null;
 
+#if VRCSDK_AVATAR_VARIABLE_WIDTH_PARAMETERS
+            var elementRect = rect;
+#endif
             var status = _parameterStatus[index];
             var parameterEmpty = status.ParameterEmpty;
             var parameterAddable = status.ParameterAddable;
@@ -406,9 +424,19 @@ namespace AwAVR.VRCSDKPlus
                         break;
                 }
 
-                Helpers.w_MakeRectLinkCursor(removeRect);
-                if (GUI.Button(removeRect, Toolbox.GUIContent.Remove, Toolbox.Styles.Label.RemoveIcon))
-                    DeleteParameter(index);
+#if VRCSDK_AVATAR_VARIABLE_WIDTH_PARAMETERS
+                    if (_showAdvancedOptions)
+                        DrawAdvancedOptions(elementRect, valueType,
+                            parameter.FindPropertyRelative("useCustomLerpDuration"),
+                            parameter.FindPropertyRelative("customLerpDuration"),
+                            parameter.FindPropertyRelative("bitWidth"),
+                            parameter.FindPropertyRelative("flippedRepresentation"),
+                            defaultValue);
+#endif
+
+                    Helpers.w_MakeRectLinkCursor(removeRect);
+                    if (GUI.Button(removeRect, Toolbox.GUIContent.Remove, Toolbox.Styles.Label.RemoveIcon))
+                        DeleteParameter(index);
             }
 
             var e = Event.current;
@@ -422,6 +450,122 @@ namespace AwAVR.VRCSDKPlus
                 menu.ShowAsContext();
             }
         }
+
+#if VRCSDK_AVATAR_VARIABLE_WIDTH_PARAMETERS
+        private static void DrawAdvancedOptions(Rect elementRect, SerializedProperty valueType,
+            SerializedProperty useCustomLerpDuration, SerializedProperty customLerpDuration,
+            SerializedProperty bitWidth, SerializedProperty flippedRepresentation, SerializedProperty defaultValue)
+        {
+            var type = (VRCExpressionParameters.ValueType)valueType.enumValueIndex;
+            if (type == VRCExpressionParameters.ValueType.Bool)
+            {
+                bitWidth.intValue = 1;
+                useCustomLerpDuration.boolValue = false;
+                flippedRepresentation.boolValue = false;
+            }
+            else if (bitWidth.intValue < VRCExpressionParameters.Parameter.MinBitWidth ||
+                     bitWidth.intValue > VRCExpressionParameters.Parameter.MaxBitWidth)
+            {
+                bitWidth.intValue = 8;
+            }
+
+            var lerpRect = new Rect(elementRect.x + 16, elementRect.y + 23, elementRect.width - 16, 18);
+            EditorGUI.LabelField(new Rect(lerpRect.x, lerpRect.y, 100, lerpRect.height), "Lerp Duration:");
+
+            var durationSelection = useCustomLerpDuration.boolValue ? 1 : 0;
+            var durationRect = new Rect(lerpRect.x + 104, lerpRect.y, 82, lerpRect.height);
+            using (new EditorGUI.DisabledScope(type == VRCExpressionParameters.ValueType.Bool))
+            {
+                durationSelection = EditorGUI.Popup(durationRect, durationSelection, new[] { "Default", "Custom" });
+                useCustomLerpDuration.boolValue = durationSelection == 1;
+
+                if (useCustomLerpDuration.boolValue)
+                {
+                    var customDurationRect = new Rect(lerpRect.x + 194, lerpRect.y, 60, lerpRect.height);
+                    EditorGUI.BeginChangeCheck();
+                    var duration = EditorGUI.FloatField(customDurationRect, customLerpDuration.floatValue);
+                    if (EditorGUI.EndChangeCheck())
+                        customLerpDuration.floatValue = Mathf.Clamp(duration,
+                            VRCExpressionParameters.Parameter.MinLerpDuration,
+                            VRCExpressionParameters.Parameter.MaxLerpDuration);
+                }
+            }
+
+            var bitsRect = new Rect(elementRect.x + 16, elementRect.y + 45, elementRect.width - 16, 18);
+            EditorGUI.LabelField(new Rect(bitsRect.x, bitsRect.y, 32, bitsRect.height), "Bits:");
+
+            var bitWidthRect = new Rect(bitsRect.x + 36, bitsRect.y, 44, bitsRect.height);
+            var representationLabelRect = new Rect(bitsRect.x + 90, bitsRect.y, 98, bitsRect.height);
+            var representationRect = new Rect(bitsRect.x + 190, bitsRect.y, 100, bitsRect.height);
+
+            using (new EditorGUI.DisabledScope(type == VRCExpressionParameters.ValueType.Bool))
+            {
+                EditorGUI.BeginChangeCheck();
+                var newBitWidth = EditorGUI.IntField(bitWidthRect, bitWidth.intValue);
+                if (EditorGUI.EndChangeCheck())
+                    bitWidth.intValue = Mathf.Clamp(newBitWidth,
+                        VRCExpressionParameters.Parameter.MinBitWidth,
+                        VRCExpressionParameters.Parameter.MaxBitWidth);
+
+                EditorGUI.LabelField(representationLabelRect, "Representation:");
+                var isSigned = type == VRCExpressionParameters.ValueType.Float
+                    ? !flippedRepresentation.boolValue
+                    : type == VRCExpressionParameters.ValueType.Int && flippedRepresentation.boolValue;
+                var representation = EditorGUI.Popup(representationRect, isSigned ? 1 : 0,
+                    new[] { "Unsigned", "Signed" });
+                if (representation != (isSigned ? 1 : 0))
+                {
+                    flippedRepresentation.boolValue = type == VRCExpressionParameters.ValueType.Float
+                        ? representation == 0
+                        : representation == 1;
+                }
+            }
+
+            var infoRect = new Rect(bitsRect.x + 298, bitsRect.y,
+                Mathf.Max(0, bitsRect.width - 298), bitsRect.height);
+            EditorGUI.LabelField(infoRect, GetAdvancedParameterInfo(type, bitWidth.intValue, flippedRepresentation.boolValue));
+
+            var bitCount = Mathf.Clamp(bitWidth.intValue,
+                VRCExpressionParameters.Parameter.MinBitWidth,
+                VRCExpressionParameters.Parameter.MaxBitWidth);
+            var signed = type == VRCExpressionParameters.ValueType.Float
+                ? !flippedRepresentation.boolValue
+                : type == VRCExpressionParameters.ValueType.Int && flippedRepresentation.boolValue;
+            var min = type == VRCExpressionParameters.ValueType.Int
+                ? signed ? -(1 << (bitCount - 1)) : 0
+                : signed ? -1 : 0;
+            var max = type == VRCExpressionParameters.ValueType.Int
+                ? signed ? (1 << (bitCount - 1)) - 1 : (1 << bitCount) - 1
+                : 1;
+
+            if (type != VRCExpressionParameters.ValueType.Bool)
+                defaultValue.floatValue = Mathf.Clamp(defaultValue.floatValue, min, max);
+        }
+
+        private static string GetAdvancedParameterInfo(VRCExpressionParameters.ValueType type, int bitWidth, bool flippedRepresentation)
+        {
+            if (type == VRCExpressionParameters.ValueType.Bool) return "True or False";
+
+            var bits = Mathf.Clamp(bitWidth,
+                VRCExpressionParameters.Parameter.MinBitWidth,
+                VRCExpressionParameters.Parameter.MaxBitWidth);
+            var isSigned = type == VRCExpressionParameters.ValueType.Float
+                ? !flippedRepresentation
+                : type == VRCExpressionParameters.ValueType.Int && flippedRepresentation;
+
+            if (type == VRCExpressionParameters.ValueType.Int)
+            {
+                var min = isSigned ? -(1 << (bits - 1)) : 0;
+                var max = isSigned ? (1 << (bits - 1)) - 1 : (1 << bits) - 1;
+                return $"Range: [{min},{max}]";
+            }
+
+            var minFloat = isSigned ? -1f : 0f;
+            var precision = (2f / ((1 << bits) - 2));
+            if (!isSigned) precision = 1f / ((1 << bits) - 2);
+            return $"Range: [{minFloat},{1}]  Precision: {precision:G4}";
+        }
+#endif
 
 
         private void DrawHeader(Rect rect)
@@ -651,7 +795,17 @@ namespace AwAVR.VRCSDKPlus
                 var p = _parameterList.GetArrayElementAtIndex(i);
                 var synced = p.FindPropertyRelative("networkSynced");
                 if (synced != null && !synced.boolValue) continue;
-                _currentCost += p.FindPropertyRelative("valueType").enumValueIndex == 2 ? 1 : 8;
+                var valueType = (VRCExpressionParameters.ValueType)p.FindPropertyRelative("valueType").enumValueIndex;
+#if VRCSDK_AVATAR_VARIABLE_WIDTH_PARAMETERS
+                var bitCost = valueType == VRCExpressionParameters.ValueType.Bool
+                    ? 1
+                    : Mathf.Clamp(p.FindPropertyRelative("bitWidth").intValue,
+                        VRCExpressionParameters.Parameter.MinBitWidth,
+                        VRCExpressionParameters.Parameter.MaxBitWidth);
+#else
+                var bitCost = valueType == VRCExpressionParameters.ValueType.Bool ? 1 : 8;
+#endif
+                _currentCost += bitCost;
             }
         }
 
@@ -662,6 +816,10 @@ namespace AwAVR.VRCSDKPlus
                 drawElementCallback = DrawElement,
                 drawHeaderCallback = DrawHeader
             };
+#if VRCSDK_AVATAR_VARIABLE_WIDTH_PARAMETERS
+            var defaultElementHeight = _parametersOrderList.elementHeight;
+            _parametersOrderList.elementHeightCallback = _ => _showAdvancedOptions ? 66 : defaultElementHeight;
+#endif
             _parametersOrderList.onReorderCallback += _ => RefreshAllParameterStatus();
             _parametersOrderList.onAddCallback = _ =>
             {
