@@ -4,6 +4,7 @@ VRCSDK+ provides alternative custom inspectors to the native VRCSDK expression m
 ### VRCSDK+ does not modify the VRCSDK in any way.
 VRCSDK+ does not require a VRC+ subscription.  
 You can revert to original editors using the context menu of the respective object.  
+Both inspectors are built with UI Toolkit and require AwA Core 1.5.0+ and VRCSDK Avatars 3.8.0+.
 VRCSDK+ currently provides the following:
 
 ### Custom VRCExpression Parameters Inspector
@@ -12,15 +13,18 @@ VRCSDK+ currently provides the following:
     - Warnings and Cleanup to make sure all parameters are valid.
     - Ability to merge two expression parameters
     - Re-orderable list with easy deletion
+    - Search parameters by name (Ctrl+F)
+    - Advanced options from VRCSDK 3.10.6+: lerp duration, bit width and signed/unsigned representation, with the range and precision shown per parameter (toggle with "Show Advanced Options")
+    - Memory usage that follows each parameter's bit width
     - Dynamic, Clean and compact UI
 
 ### Custom VRCExpression Menu Inspector (In Collab with @foxscore)
-    - Menu History to switch between previously visited Menus
-    - QoL buttons such as Copy, Paste, Duplicate and Move
+    - Menu History to switch between previously visited Menus, separate for every Inspector window (also works in locked Inspectors)
+    - QoL buttons such as Copy, Paste, Duplicate and Move (cut a control, then place it in this or any other menu)
     - Ability to add parameters to expression parameters from the editor
     - Ability to quickly add a new SubMenu asset to SubMenu control
     - Ability to set styling for the control such as Bold, Italic and Color
-    - Toggle Compact Mode through the window's options
+    - Toggle Compact Mode with the "Compact" button or through the window's options
     - Warnings to make sure all parameters are valid.
     - Dynamic, Clean and compact UI
 

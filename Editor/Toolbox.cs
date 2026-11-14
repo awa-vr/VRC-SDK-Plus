@@ -5,8 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
-using UnityEditorInternal;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using AnimatorController = UnityEditor.Animations.AnimatorController;
@@ -123,13 +124,6 @@ namespace AwAVR.VRCSDKPlus {
 
         #endregion
 
-        internal static bool TryGetActiveIndex(this ReorderableList orderList, out int index) {
-            index = orderList.index;
-            if (index < orderList.count && index >= 0) return true;
-            index = -1;
-            return false;
-        }
-
         public static string GenerateUniqueString(string s, Func<string, bool> PassCondition,
             bool addNumberIfMissing = true) {
             if (PassCondition(s)) return s;
@@ -142,251 +136,6 @@ namespace AwAVR.VRCSDKPlus {
                 numberString = (int.Parse(numberString) + 1).ToString(new string('0', numberString.Length));
 
             return $"{newString}{numberString}";
-        }
-
-        public static class Container {
-            public class Vertical : IDisposable {
-                public Vertical(params GUILayoutOption[] options)
-                    => EditorGUILayout.BeginVertical(GUI.skin.GetStyle("helpbox"), options);
-
-                public Vertical(string title, params GUILayoutOption[] options) {
-                    EditorGUILayout.BeginVertical(GUI.skin.GetStyle("helpbox"), options);
-
-                    EditorGUILayout.LabelField(title, Toolbox.Styles.Label.Centered);
-                }
-
-                public void Dispose() => EditorGUILayout.EndVertical();
-            }
-
-            public class Horizontal : IDisposable {
-                public Horizontal(params GUILayoutOption[] options)
-                    => EditorGUILayout.BeginHorizontal(GUI.skin.GetStyle("helpbox"), options);
-
-                public Horizontal(string title, params GUILayoutOption[] options) {
-                    EditorGUILayout.BeginHorizontal(GUI.skin.GetStyle("helpbox"), options);
-
-                    EditorGUILayout.LabelField(title, Toolbox.Styles.Label.Centered);
-                }
-
-                public void Dispose() => EditorGUILayout.EndHorizontal();
-            }
-
-            public static void BeginLayout(params GUILayoutOption[] options)
-                => EditorGUILayout.BeginVertical(GUI.skin.GetStyle("helpbox"), options);
-
-            public static void BeginLayout(string title, params GUILayoutOption[] options) {
-                EditorGUILayout.BeginVertical(GUI.skin.GetStyle("helpbox"), options);
-
-                EditorGUILayout.LabelField(title, Toolbox.Styles.Label.Centered);
-            }
-
-            public static void EndLayout() => EditorGUILayout.EndVertical();
-
-            public static Rect GUIBox(float height) {
-                var rect = EditorGUILayout.GetControlRect(false, height);
-                return GUIBox(ref rect);
-            }
-
-            public static Rect GUIBox(ref Rect rect) {
-                GUI.Box(rect, "", GUI.skin.GetStyle("helpbox"));
-
-                rect.x += 4;
-                rect.width -= 8;
-                rect.y += 3;
-                rect.height -= 6;
-
-                return rect;
-            }
-        }
-
-        public static class Placeholder {
-            public static void GUILayout(float height) =>
-                GUI(EditorGUILayout.GetControlRect(false, height));
-
-            public static void GUI(Rect rect) => GUI(rect, EditorGUIUtility.isProSkin ? 53 : 182);
-
-            private static void GUI(Rect rect, float color) {
-                EditorGUI.DrawTextureTransparent(rect, GetColorTexture(color));
-            }
-        }
-
-        public static class Styles {
-            public const float Padding = 3;
-
-            public static class Label {
-                internal static readonly UnityEngine.GUIStyle Centered
-                    = new UnityEngine.GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
-
-                internal static readonly UnityEngine.GUIStyle RichText
-                    = new UnityEngine.GUIStyle(GUI.skin.label) { richText = true };
-
-
-                internal static readonly UnityEngine.GUIStyle Type
-                    = new UnityEngine.GUIStyle(GUI.skin.label) {
-                        alignment = TextAnchor.MiddleRight,
-                        normal = {
-                            textColor = EditorGUIUtility.isProSkin ? Color.gray : BrightnessToColor(91),
-                        },
-                        fontStyle = FontStyle.Italic,
-                    };
-
-                internal static readonly UnityEngine.GUIStyle PlaceHolder
-                    = new UnityEngine.GUIStyle(Type) {
-                        fontSize = 11,
-                        alignment = TextAnchor.MiddleLeft,
-                        contentOffset = new Vector2(2.5f, 0)
-                    };
-
-                internal static readonly GUIStyle faintLinkLabel = new GUIStyle(PlaceHolder)
-                    { name = "Toggle", hover = { textColor = new Color(0.3f, 0.7f, 1) } };
-
-                internal static readonly UnityEngine.GUIStyle TypeFocused
-                    = new UnityEngine.GUIStyle(GUI.skin.label) {
-                        alignment = TextAnchor.MiddleRight,
-                        normal = {
-                            textColor = EditorGUIUtility.isProSkin ? Color.white : Color.black,
-                        },
-                        fontStyle = FontStyle.Italic,
-                    };
-
-                internal static readonly GUIStyle TypeLabel = new GUIStyle(PlaceHolder)
-                    { contentOffset = new Vector2(-2.5f, 0) };
-
-                internal static readonly GUIStyle RightPlaceHolder = new GUIStyle(TypeLabel)
-                    { alignment = TextAnchor.MiddleRight };
-
-                internal static readonly UnityEngine.GUIStyle Watermark
-                    = new UnityEngine.GUIStyle(PlaceHolder) {
-                        alignment = TextAnchor.MiddleRight,
-                        fontSize = 10,
-                    };
-
-                internal static readonly UnityEngine.GUIStyle LabelDropdown
-                    = new UnityEngine.GUIStyle(GUI.skin.GetStyle("DropDownButton")) {
-                        alignment = TextAnchor.MiddleLeft,
-                        contentOffset = new Vector2(2.5f, 0)
-                    };
-
-                internal static readonly UnityEngine.GUIStyle RemoveIcon
-                    = new UnityEngine.GUIStyle(GUI.skin.GetStyle("RL FooterButton"));
-            }
-
-            internal static readonly GUIStyle icon = new GUIStyle(GUI.skin.label) { fixedWidth = 18, fixedHeight = 18 };
-
-            internal static readonly UnityEngine.GUIStyle letterButton =
-                new UnityEngine.GUIStyle(GUI.skin.button)
-                    { padding = new RectOffset(), margin = new RectOffset(1, 1, 1, 1), richText = true };
-        }
-
-        public static class Strings {
-            public const string IconCopy = "SaveActive";
-            public const string IconPaste = "Clipboard";
-            public const string IconMove = "MoveTool";
-            public const string IconPlace = "DefaultSorting";
-            public const string IconDuplicate = "TreeEditor.Duplicate";
-            public const string IconHelp = "_Help";
-            public const string IconWarn = "console.warnicon.sml";
-            public const string IconError = "console.erroricon.sml";
-            public const string IconClear = "winbtn_win_close";
-            public const string IconFolder = "FolderOpened Icon";
-            public const string IconRemove = "Toolbar Minus";
-            public const string IconSearch = "Search Icon";
-
-            public const string ClipboardPrefixControl = "[TAG=VSP_CONTROL]";
-
-            public const string SettingsCompact = "VSP_Compact";
-        }
-
-        public static class GUIContent {
-            public const string MissingParametersTooltip =
-                "No Expression Parameters targeted. Auto-fill and warnings are disabled.";
-
-            public const string MenuFullTooltip = "Menu's controls are already maxed out. (8/8)";
-
-            public static readonly UnityEngine.GUIContent Copy
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconCopy)) {
-                    tooltip = "Copy"
-                };
-
-            public static readonly UnityEngine.GUIContent Paste
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconPaste)) {
-                    tooltip = "Paste"
-                };
-
-            public static readonly UnityEngine.GUIContent Move
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconMove)) {
-                    tooltip = "Move"
-                };
-
-            public static readonly UnityEngine.GUIContent Place
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconPlace)) {
-                    tooltip = "Place"
-                };
-
-            public static readonly UnityEngine.GUIContent Duplicate
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconDuplicate)) {
-                    tooltip = "Duplicate"
-                };
-
-            public static readonly UnityEngine.GUIContent Help
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconHelp));
-
-            public static readonly UnityEngine.GUIContent Warn
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconWarn));
-
-            public static readonly UnityEngine.GUIContent Error
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconError));
-
-            public static readonly UnityEngine.GUIContent Clear
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconClear)) {
-                    tooltip = "Clear"
-                };
-
-            public static readonly UnityEngine.GUIContent Folder
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconFolder)) {
-                    tooltip = "Open"
-                };
-
-            public static readonly UnityEngine.GUIContent Remove
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconRemove))
-                    { tooltip = "Remove parameter from list" };
-
-            public static readonly UnityEngine.GUIContent Search
-                = new UnityEngine.GUIContent(EditorGUIUtility.IconContent(Toolbox.Strings.IconSearch))
-                    { tooltip = "Search" };
-        }
-
-        public static class Preferences {
-            public static bool CompactMode {
-                get => EditorPrefs.GetBool(Toolbox.Strings.SettingsCompact, false);
-                set => EditorPrefs.SetBool(Toolbox.Strings.SettingsCompact, value);
-            }
-        }
-
-        public static Color BrightnessToColor(float brightness) {
-            if (brightness > 1) brightness /= 255;
-            return new Color(brightness, brightness, brightness, 1);
-        }
-
-        private static readonly Texture2D tempTexture = new Texture2D(1, 1)
-            { anisoLevel = 0, filterMode = FilterMode.Point };
-
-        internal static Texture2D GetColorTexture(float rgb, float a = 1)
-            => GetColorTexture(rgb, rgb, rgb, a);
-
-        internal static Texture2D GetColorTexture(float r, float g, float b, float a = 1) {
-            if (r > 1) r /= 255;
-            if (g > 1) g /= 255;
-            if (b > 1) b /= 255;
-            if (a > 1) a /= 255;
-
-            return GetColorTexture(new Color(r, g, b, a));
-        }
-
-        internal static Texture2D GetColorTexture(Color color) {
-            tempTexture.SetPixel(0, 0, color);
-            tempTexture.Apply();
-            return tempTexture;
         }
 
         // ReSharper disable once InconsistentNaming
@@ -462,7 +211,230 @@ namespace AwAVR.VRCSDKPlus {
             return false;
         }
 
-        #region Keyboard Commands
+        public static class Strings {
+            public const string IconCopy = "SaveActive";
+            public const string IconPaste = "Clipboard";
+            public const string IconMove = "MoveTool";
+            public const string IconPlace = "DefaultSorting";
+            public const string IconDuplicate = "TreeEditor.Duplicate";
+            public const string IconHelp = "_Help";
+            public const string IconWarn = "console.warnicon.sml";
+            public const string IconError = "console.erroricon.sml";
+            public const string IconClear = "winbtn_win_close";
+            public const string IconFolder = "FolderOpened Icon";
+            public const string IconRemove = "Toolbar Minus";
+            public const string IconAdd = "Toolbar Plus";
+            public const string IconSearch = "Search Icon";
+            public const string IconEdit = "d_editicon.sml";
+            public const string IconRefresh = "Refresh";
+
+            public const string ClipboardPrefixControl = "[TAG=VSP_CONTROL]";
+
+            public const string SettingsCompact = "VSP_Compact";
+
+            // Shared with the VRCSDK's own editor so the option stays in sync when switching editors.
+            public const string SettingsShowAdvancedParameters = "VRC.ExpressionParameters.ShowAdvancedOptions";
+
+            public const string MissingParametersTooltip =
+                "No Expression Parameters targeted. Auto-fill and warnings are disabled.";
+
+            public const string MenuFullTooltip = "Menu's controls are already maxed out. (8/8)";
+        }
+
+        public static class Preferences {
+            public static bool CompactMode {
+                get => EditorPrefs.GetBool(Strings.SettingsCompact, false);
+                set => EditorPrefs.SetBool(Strings.SettingsCompact, value);
+            }
+
+            public static bool ShowAdvancedParameters {
+                get => EditorPrefs.GetBool(Strings.SettingsShowAdvancedParameters, false);
+                set => EditorPrefs.SetBool(Strings.SettingsShowAdvancedParameters, value);
+            }
+        }
+
+        #region UI Toolkit
+
+        private static StyleSheet _styleSheet;
+
+        /// <summary>Adds the VRCSDK+ stylesheet to an inspector root.</summary>
+        internal static void AddStyleSheet(VisualElement root) {
+            if (!_styleSheet) _styleSheet = Resources.Load<StyleSheet>("AwAVRSDKPlusStyles");
+            if (_styleSheet) root.styleSheets.Add(_styleSheet);
+            root.AddToClassList("sdkp-root");
+        }
+
+        private static readonly Dictionary<string, Texture2D> IconCache = new Dictionary<string, Texture2D>();
+
+        internal static Texture2D GetIcon(string iconName) {
+            if (IconCache.TryGetValue(iconName, out var icon) && icon) return icon;
+            icon = EditorGUIUtility.IconContent(iconName)?.image as Texture2D;
+            IconCache[iconName] = icon;
+            return icon;
+        }
+
+        /// <summary>A small, frameless button showing a built-in editor icon.</summary>
+        internal static Button IconButton(string iconName, string tooltip, Action onClick) {
+            var button = new Button(onClick) { tooltip = tooltip };
+            button.AddToClassList("sdkp-icon-button");
+            SetIcon(button, iconName);
+            return button;
+        }
+
+        internal static void SetIcon(VisualElement element, string iconName) {
+            var icon = GetIcon(iconName);
+            element.style.backgroundImage = icon ? new StyleBackground(icon) : new StyleBackground(StyleKeyword.None);
+        }
+
+        /// <summary>A non-interactive icon, used for warnings with a tooltip.</summary>
+        internal static VisualElement Icon(string iconName, string tooltip = null) {
+            var element = new VisualElement { tooltip = tooltip };
+            element.AddToClassList("sdkp-icon");
+            SetIcon(element, iconName);
+            return element;
+        }
+
+        /// <summary>
+        /// Calls <paramref name="onChanged"/> when <paramref name="serializedObject"/>'s target changes, whether from this
+        /// inspector, another one, undo/redo or a script. Uses binding tracking plus a light dirty-count poll as backup.
+        /// </summary>
+        internal static VisualElement CreateChangeTracker(SerializedObject serializedObject, Action onChanged) {
+            var tracker = new VisualElement { name = "sdkp-change-tracker", pickingMode = PickingMode.Ignore };
+            tracker.style.position = Position.Absolute;
+            tracker.style.width = 0;
+            tracker.style.height = 0;
+            tracker.TrackSerializedObjectValue(serializedObject, _ => onChanged());
+
+            int lastDirtyCount = -1;
+            tracker.schedule.Execute(() => {
+                Object target;
+                try {
+                    target = serializedObject.targetObject;
+                }
+                catch (Exception) {
+                    return; // disposed
+                }
+
+                if (!target) return;
+                int dirtyCount = EditorUtility.GetDirtyCount(target);
+                bool updated = serializedObject.UpdateIfRequiredOrScript();
+                if (dirtyCount == lastDirtyCount && !updated) return;
+                bool first = lastDirtyCount == -1;
+                lastDirtyCount = dirtyCount;
+                if (!first || updated) onChanged();
+            }).Every(150);
+            return tracker;
+        }
+
+        internal static void SetDisplayed(this VisualElement element, bool displayed) =>
+            element.style.display = displayed ? DisplayStyle.Flex : DisplayStyle.None;
+
+        /// <summary>Overlays a grey hint (e.g. a placeholder or the matched parameter type) inside a text field.</summary>
+        internal static Label AddHint(TextField field, string text, bool rightAligned) {
+            var hint = new Label(text) { pickingMode = PickingMode.Ignore };
+            hint.AddToClassList("sdkp-hint");
+            hint.AddToClassList(rightAligned ? "sdkp-hint--right" : "sdkp-hint--left");
+            // Inside the input box, so a field label in front of it isn't covered.
+            (field.Q(className: TextField.inputUssClassName) ?? field).Add(hint);
+            return hint;
+        }
+
+        /// <summary>Makes a field with a label line its input up with the other fields in the inspector.</summary>
+        internal static T Aligned<T>(this T field) where T : VisualElement {
+            field.AddToClassList(BaseField<int>.alignedFieldUssClassName);
+            return field;
+        }
+
+        /// <summary>
+        /// A texture field drawn as a thumbnail: the picked texture fills it, drop a texture on it or use its picker button.
+        /// Call the returned refresh action when the property may have changed.
+        /// </summary>
+        internal static ObjectField ThumbnailField(SerializedProperty property, float width, float height, string placeholder,
+            out Action refresh) {
+            var field = new ObjectField { objectType = typeof(Texture2D), allowSceneObjects = false };
+            field.AddToClassList("sdkp-thumbnail");
+            field.style.width = width;
+            field.style.height = height;
+            field.BindProperty(property);
+
+            var hint = new Label(placeholder) { pickingMode = PickingMode.Ignore };
+            hint.AddToClassList("sdkp-thumbnail-hint");
+            field.Add(hint);
+
+            refresh = () => {
+                Texture2D texture;
+                try {
+                    texture = property.objectReferenceValue as Texture2D;
+                }
+                catch (Exception) {
+                    return; // property disposed
+                }
+
+                var display = field.Q(className: ObjectField.objectUssClassName);
+                if (display != null)
+                    display.style.backgroundImage = texture ? new StyleBackground(texture) : new StyleBackground(StyleKeyword.None);
+                hint.SetDisplayed(!texture);
+                field.tooltip = texture ? texture.name : $"{placeholder} (drop a texture here)";
+            };
+            var refreshAction = refresh;
+            field.RegisterValueChangedCallback(_ => refreshAction());
+            field.RegisterCallback<AttachToPanelEvent>(_ => field.schedule.Execute(refreshAction));
+            return field;
+        }
+
+        /// <summary>
+        /// True while the user is typing in a text or number field, so list shortcuts (copy, paste, delete)
+        /// should be left to that field.
+        /// </summary>
+        internal static bool IsEditingText(VisualElement element) {
+            var focused = element?.panel?.focusController?.focusedElement as VisualElement;
+            for (var e = focused; e != null; e = e.parent) {
+                for (var t = e.GetType(); t != null && t != typeof(VisualElement); t = t.BaseType) {
+                    if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(TextInputBaseField<>))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static double _lastDeleteTime;
+
+        /// <summary>
+        /// Routes editor commands (Copy, Paste, Duplicate, SoftDelete, ...) and the Delete key to <paramref name="execute"/>
+        /// while <paramref name="element"/> or one of its children has focus. Typing in text fields is left alone.
+        /// </summary>
+        internal static void RegisterCommands(VisualElement element, Func<EventCommands, bool> canExecute,
+            Action<EventCommands> execute) {
+            bool TryParse(string commandName, out EventCommands command) =>
+                Enum.TryParse(commandName, out command) && !IsEditingText(element);
+
+            element.RegisterCallback<ValidateCommandEvent>(evt => {
+                if (TryParse(evt.commandName, out var command) && canExecute(command))
+                    evt.StopPropagation();
+            });
+
+            element.RegisterCallback<ExecuteCommandEvent>(evt => {
+                if (!TryParse(evt.commandName, out var command) || !canExecute(command)) return;
+                evt.StopPropagation();
+                if (command == EventCommands.Delete || command == EventCommands.SoftDelete) {
+                    // The Delete key can arrive both as a key press and as a command, only act once.
+                    if (EditorApplication.timeSinceStartup - _lastDeleteTime < 0.1) return;
+                    _lastDeleteTime = EditorApplication.timeSinceStartup;
+                }
+
+                execute(command);
+            });
+
+            element.RegisterCallback<KeyDownEvent>(evt => {
+                if (evt.keyCode != KeyCode.Delete || IsEditingText(element)) return;
+                if (!canExecute(EventCommands.SoftDelete)) return;
+                evt.StopPropagation();
+                if (EditorApplication.timeSinceStartup - _lastDeleteTime < 0.1) return;
+                _lastDeleteTime = EditorApplication.timeSinceStartup;
+                execute(EventCommands.SoftDelete);
+            });
+        }
 
         internal enum EventCommands {
             Copy,
@@ -478,199 +450,19 @@ namespace AwAVR.VRCSDKPlus {
             FocusProjectWindow
         }
 
-        internal static bool HasReceivedCommand(EventCommands command, string matchFocusControl = "",
-            bool useEvent = true) {
-            if (!string.IsNullOrEmpty(matchFocusControl) && GUI.GetNameOfFocusedControl() != matchFocusControl)
-                return false;
-            Event e = Event.current;
-            if (e.type != EventType.ValidateCommand) return false;
-            bool received = command.ToString() == e.commandName;
-            if (received && useEvent) e.Use();
-            return received;
-        }
-
-        internal static bool HasReceivedKey(KeyCode key, string matchFocusControl = "", bool useEvent = true) {
-            if (!string.IsNullOrEmpty(matchFocusControl) && GUI.GetNameOfFocusedControl() != matchFocusControl)
-                return false;
-            Event e = Event.current;
-            bool received = e.type == EventType.KeyDown && e.keyCode == key;
-            if (received && useEvent) e.Use();
-            return received;
-        }
-
-        internal static bool HasReceivedEnter(string matchFocusControl = "", bool useEvent = true) =>
-            HasReceivedKey(KeyCode.Return, matchFocusControl, useEvent) ||
-            HasReceivedKey(KeyCode.KeypadEnter, matchFocusControl, useEvent);
-
-        internal static bool HasReceivedCancel(string matchFocusControl = "", bool useEvent = true) =>
-            HasReceivedKey(KeyCode.Escape, matchFocusControl, useEvent);
-
-        internal static bool HasReceivedAnyDelete(string matchFocusControl = "", bool useEvent = true) =>
-            HasReceivedCommand(EventCommands.SoftDelete, matchFocusControl, useEvent) ||
-            HasReceivedCommand(EventCommands.Delete, matchFocusControl, useEvent) ||
-            HasReceivedKey(KeyCode.Delete, matchFocusControl, useEvent);
-
-        internal static bool HandleConfirmEvents(string matchFocusControl = "", Action onConfirm = null,
-            Action onCancel = null) {
-            if (HasReceivedEnter(matchFocusControl)) {
-                onConfirm?.Invoke();
-                return true;
-            }
-
-            if (HasReceivedCancel(matchFocusControl)) {
-                onCancel?.Invoke();
-                return true;
-            }
-
-            return false;
-        }
-
-        internal static bool HandleTextFocusConfirmCommands(string matchFocusControl, Action onConfirm = null,
-            Action onCancel = null) {
-            if (!HandleConfirmEvents(matchFocusControl, onConfirm, onCancel)) return false;
-            GUI.FocusControl(null);
-            return true;
-        }
-
         #endregion
 
-        internal abstract class CustomDropdownBase : PopupWindowContent {
-            internal static readonly GUIStyle backgroundStyle = new GUIStyle() {
-                hover = { background = Toolbox.GetColorTexture(new Color(0.3020f, 0.3020f, 0.3020f)) },
-                active = { background = Toolbox.GetColorTexture(new Color(0.1725f, 0.3647f, 0.5294f)) }
-            };
-
-            internal static readonly GUIStyle titleStyle = new GUIStyle(GUI.skin.label) {
-                alignment = TextAnchor.MiddleCenter,
-                fontStyle = FontStyle.Bold
-            };
-        }
-
-        internal class CustomDropdown<T> : CustomDropdownBase {
-            private readonly string title;
-            private string search;
-            internal DropDownItem[] items;
-            private readonly Action<DropDownItem> itemGUI;
-            private readonly Action<int, T> onSelected;
-            private Func<T, string, bool> onSearchChanged;
-
-            private bool hasSearch;
-            private float width;
-            private bool firstPass = true;
-            private Vector2 scroll;
-            private readonly Rect[] selectionRects;
-
-            public CustomDropdown(string title, IEnumerable<T> itemArray, Action<DropDownItem> itemGUI,
-                Action<int, T> onSelected) {
-                this.title = title;
-                this.onSelected = onSelected;
-                this.itemGUI = itemGUI;
-                items = itemArray.Select((item, i) => new DropDownItem(item, i)).ToArray();
-                selectionRects = new Rect[items.Length];
+        /// <summary>
+        /// Regex match that treats an invalid pattern (e.g. a lone "[" while typing) as a plain, case-insensitive substring.
+        /// </summary>
+        internal static bool SearchMatches(string value, string search) {
+            if (string.IsNullOrEmpty(search)) return true;
+            value = value ?? string.Empty;
+            try {
+                return Regex.IsMatch(value, search, RegexOptions.IgnoreCase);
             }
-
-            public void EnableSearch(Func<T, string, bool> onSearchChanged) {
-                hasSearch = true;
-                this.onSearchChanged = onSearchChanged;
-            }
-
-            public void OrderBy(Func<T, object> orderFunc) {
-                items = orderFunc != null ? items.OrderBy(item => orderFunc(item.value)).ToArray() : items;
-            }
-
-            public void SetExtraOptions(Func<T, object[]> argReturn) {
-                foreach (var i in items)
-                    i.args = argReturn(i.value);
-            }
-
-            public override void OnGUI(Rect rect) {
-                using (new GUILayout.AreaScope(rect)) {
-                    var e = Event.current;
-                    scroll = GUILayout.BeginScrollView(scroll);
-                    if (!string.IsNullOrEmpty(title)) {
-                        GUILayout.Label(title, titleStyle);
-                        DrawSeparator();
-                    }
-
-                    if (hasSearch) {
-                        EditorGUI.BeginChangeCheck();
-                        if (firstPass) GUI.SetNextControlName($"{title}SearchBar");
-                        search = EditorGUILayout.TextField(search, GUI.skin.GetStyle("SearchTextField"));
-                        if (EditorGUI.EndChangeCheck()) {
-                            foreach (var i in items)
-                                i.displayed = onSearchChanged(i.value, search);
-                        }
-                    }
-
-                    var t = e.type;
-                    for (int i = 0; i < items.Length; i++) {
-                        var item = items[i];
-                        if (!item.displayed) continue;
-                        if (!firstPass) {
-                            if (GUI.Button(selectionRects[i], string.Empty, backgroundStyle)) {
-                                onSelected(item.itemIndex, item.value);
-                                editorWindow.Close();
-                            }
-                        }
-
-                        using (new GUILayout.VerticalScope()) itemGUI(item);
-
-                        if (t == EventType.Repaint) {
-                            selectionRects[i] = GUILayoutUtility.GetLastRect();
-
-                            if (firstPass && selectionRects[i].width > width)
-                                width = selectionRects[i].width;
-                        }
-                    }
-
-                    if (t == EventType.Repaint && firstPass) {
-                        firstPass = false;
-                        GUI.FocusControl($"{title}SearchBar");
-                    }
-
-                    GUILayout.EndScrollView();
-                    if (rect.Contains(e.mousePosition))
-                        editorWindow.Repaint();
-                }
-            }
-
-            public override Vector2 GetWindowSize() {
-                Vector2 ogSize = base.GetWindowSize();
-                if (!firstPass) ogSize.x = width + 21;
-                return ogSize;
-            }
-
-            public void Show(Rect position) => PopupWindow.Show(position, this);
-
-            internal class DropDownItem {
-                internal readonly int itemIndex;
-                internal readonly T value;
-
-                internal object[] args;
-                internal bool displayed = true;
-
-                internal object extra {
-                    get => args[0];
-                    set => args[0] = value;
-                }
-
-                internal DropDownItem(T value, int itemIndex) {
-                    this.value = value;
-                    this.itemIndex = itemIndex;
-                }
-
-                public static implicit operator T(DropDownItem i) => i.value;
-            }
-
-            private static void DrawSeparator(int thickness = 2, int padding = 10) {
-                Rect r = EditorGUILayout.GetControlRect(GUILayout.Height(thickness + padding));
-                r.height = thickness;
-                r.y += padding / 2f;
-                r.x -= 2;
-                r.width += 6;
-                ColorUtility.TryParseHtmlString(EditorGUIUtility.isProSkin ? "#595959" : "#858585",
-                    out Color lineColor);
-                EditorGUI.DrawRect(r, lineColor);
+            catch (ArgumentException) {
+                return value.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
             }
         }
     }

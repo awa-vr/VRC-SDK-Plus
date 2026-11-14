@@ -1,0 +1,416 @@
+/* VRCSDK+ inspector styles. Class names are prefixed with "sdkp-" to avoid clashing with other packages. */
+
+.sdkp-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.sdkp-grow {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 40px;
+}
+
+.sdkp-section {
+    margin-top: 4px;
+    margin-bottom: 2px;
+    padding: 3px 4px;
+    background-color: rgba(0, 0, 0, 0.08);
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+.sdkp-section-title {
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    margin-bottom: 2px;
+}
+
+.sdkp-icon-button {
+    width: 20px;
+    min-width: 20px;
+    height: 18px;
+    margin: 0 1px;
+    padding: 0;
+    border-width: 0;
+    border-radius: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    -unity-background-scale-mode: scale-to-fit;
+    flex-shrink: 0;
+}
+
+.sdkp-icon-button:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.sdkp-icon-button:active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.sdkp-icon-button:disabled {
+    opacity: 0.35;
+}
+
+.sdkp-icon {
+    width: 16px;
+    height: 16px;
+    margin: 0 2px;
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sdkp-small-button {
+    margin: 0 1px;
+    padding: 0 4px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.sdkp-dropdown-button {
+    width: 18px;
+    min-width: 18px;
+    height: 18px;
+    margin: 0 2px 0 0;
+    padding: 0;
+    flex-shrink: 0;
+    -unity-text-align: middle-center;
+}
+
+.sdkp-hint {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    -unity-font-style: italic;
+    font-size: 11px;
+    color: rgb(128, 128, 128);
+    padding: 0;
+    margin: 0;
+}
+
+.sdkp-hint--right {
+    right: 6px;
+    -unity-text-align: middle-right;
+}
+
+.sdkp-hint--left {
+    left: 7px;
+    -unity-text-align: middle-left;
+}
+
+.sdkp-dimmed {
+    opacity: 0.35;
+}
+
+.sdkp-memory-bar {
+    flex-grow: 1;
+    margin: 0 2px;
+    padding: 0;
+}
+
+.sdkp-memory-bar--over .unity-progress-bar__progress {
+    background-color: rgba(255, 0, 0, 0.5);
+}
+
+.sdkp-memory-bar--low .unity-progress-bar__progress {
+    background-color: rgba(204, 178, 0, 0.5);
+}
+
+.sdkp-memory-bar--ok .unity-progress-bar__progress {
+    background-color: rgba(0, 128, 255, 0.5);
+}
+
+/* Parameters list
+   Rows have a fixed height (VRCParamsPlus.RowHeight / AdvancedRowHeight): 2 + 20 (+ 2 + 44 + 2) + 2 slack. */
+
+.sdkp-param-header {
+    position: relative;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-width: 1px 1px 0 1px;
+    border-color: rgba(0, 0, 0, 0.5);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.sdkp-header-label {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    visibility: hidden;
+}
+
+.sdkp-param-item {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.sdkp-param-main {
+    flex-direction: row;
+    align-items: center;
+    height: 20px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.sdkp-col-name {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 40px;
+    margin: 0 2px 0 0;
+}
+
+.sdkp-col-type {
+    width: 64px;
+    flex-shrink: 0;
+    margin: 0 4px 0 0;
+}
+
+.sdkp-col-default {
+    width: 52px;
+    flex-shrink: 0;
+    margin: 0 4px 0 0;
+}
+
+.sdkp-col-toggle {
+    width: 46px;
+    flex-shrink: 0;
+    margin: 0;
+    justify-content: center;
+    align-items: center;
+}
+
+.sdkp-col-toggle > Toggle,
+.sdkp-col-default > Toggle {
+    margin: 0;
+}
+
+.sdkp-col-remove {
+    width: 22px;
+    flex-shrink: 0;
+}
+
+.sdkp-col-status {
+    width: 18px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.sdkp-param-advanced {
+    flex-direction: column;
+    justify-content: space-between;
+    height: 44px;
+    margin: 2px 22px 2px 4px;
+    padding: 2px 6px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+}
+
+.sdkp-adv-line {
+    flex-direction: row;
+    align-items: center;
+    height: 19px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.sdkp-adv-label {
+    margin: 0 4px 0 0;
+    padding: 0;
+    flex-shrink: 0;
+    -unity-text-align: middle-left;
+}
+
+.sdkp-adv-label--fixed {
+    width: 92px;
+}
+
+.sdkp-adv-field {
+    margin: 0 2px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.sdkp-adv-info {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin-left: 8px;
+    padding: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgb(150, 150, 150);
+}
+
+/* Menu editor */
+
+.sdkp-history {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.sdkp-history Button {
+    margin: 0 1px;
+    min-width: 24px;
+}
+
+.sdkp-history-title {
+    flex-grow: 1;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sdkp-controls-header {
+    flex-direction: row;
+    align-items: center;
+    height: 22px;
+    padding: 0 4px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-width: 1px 1px 0 1px;
+    border-color: rgba(0, 0, 0, 0.5);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.sdkp-control-item {
+    flex-direction: row;
+    align-items: center;
+    height: 20px;
+    padding-right: 2px;
+}
+
+.sdkp-control-name {
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 2px;
+}
+
+.sdkp-control-name--empty {
+    color: rgb(128, 128, 128);
+    -unity-font-style: italic;
+}
+
+.sdkp-control-type {
+    -unity-font-style: italic;
+    color: rgb(128, 128, 128);
+    margin-right: 4px;
+}
+
+.sdkp-moving {
+    background-color: rgba(60, 125, 230, 0.25);
+}
+
+.sdkp-field-label {
+    width: 100px;
+    min-width: 100px;
+    -unity-text-align: middle-left;
+    padding-left: 1px;
+}
+
+.sdkp-control-main {
+    flex-direction: row;
+}
+
+.sdkp-control-fields {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.sdkp-control-fields > * {
+    margin-bottom: 3px;
+}
+
+/* Texture field drawn as a thumbnail (Toolbox.ThumbnailField) */
+
+.sdkp-thumbnail {
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    flex-direction: row;
+}
+
+.sdkp-thumbnail > .unity-object-field__input {
+    flex-grow: 1;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    height: auto;
+}
+
+.sdkp-thumbnail .unity-object-field__object {
+    flex-grow: 1;
+    margin: 0;
+    padding: 2px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sdkp-thumbnail .unity-object-field-display__icon,
+.sdkp-thumbnail .unity-object-field-display__label {
+    display: none;
+}
+
+.sdkp-thumbnail .unity-object-field__selector {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    border-radius: 2px;
+    background-color: rgba(40, 40, 40, 0.7);
+}
+
+.sdkp-icon-swatch {
+    width: 20px;
+    height: 20px;
+    margin-left: 4px;
+    flex-shrink: 0;
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.4);
+    border-radius: 2px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sdkp-thumbnail-hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-center;
+    font-size: 10px;
+    color: rgb(128, 128, 128);
+}
+
+.sdkp-style-toggle {
+    width: 22px;
+    min-width: 22px;
+    margin: 0 0 0 2px;
+    padding: 0;
+    -unity-text-align: middle-center;
+}
+
+.sdkp-axis-label {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.sdkp-control-fields > .unity-base-field,
+.sdkp-control-fields > .sdkp-row,
+.sdkp-parameter-selector > .unity-base-field {
+    margin-left: 0;
+}

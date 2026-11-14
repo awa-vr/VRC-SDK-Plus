@@ -8,12 +8,10 @@ using AnimatorController = UnityEditor.Animations.AnimatorController;
 using AnimatorControllerParameter = UnityEngine.AnimatorControllerParameter;
 
 namespace AwAVR.VRCSDKPlus {
-    internal sealed class VRCSDKPlus {
-        private static bool _initialized;
-        private static GUIContent _redWarnIcon;
-        private static GUIContent _yellowWarnIcon;
-        internal static GUIStyle CenteredLabel => new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
-
+    /// <summary>
+    /// State shared by the parameters and menu inspectors: the targeted avatar and what its animators contain.
+    /// </summary>
+    internal static class VRCSDKPlus {
         private static readonly string[] AllPlayables = {
             "Base",
             "Additive",
@@ -26,81 +24,81 @@ namespace AwAVR.VRCSDKPlus {
         };
 
         private static VRCAvatarDescriptor _avatar;
-        private static List<VRCAvatarDescriptor> _validAvatars;
-        private static AnimatorControllerParameter[] _validParameters;
+        private static AnimatorControllerParameter[] _validParameters = Array.Empty<AnimatorControllerParameter>();
+        private static string[] _validPlayables = Array.Empty<string>();
+        private static int[] _validPlayableIndexes = Array.Empty<int>();
 
-        private static string[] _validPlayables;
-        private static int[] _validPlayableIndexes;
+        /// <summary>Raised when the targeted avatar changes or its animators were re-scanned.</summary>
+        internal static event Action AvatarInfoChanged;
 
-        internal static void InitConstants() {
-            if (_initialized) return;
-            _redWarnIcon = new GUIContent(EditorGUIUtility.IconContent("CollabError"));
-            //advancedPopupMethod = typeof(EditorGUI).GetMethod("AdvancedPopup", BindingFlags.NonPublic | BindingFlags.Static, null, new[] { typeof(Rect), typeof(int), typeof(string[]) }, null);
-            _yellowWarnIcon = new GUIContent(EditorGUIUtility.IconContent("d_console.warnicon.sml"));
-            _initialized = true;
+        internal static VRCAvatarDescriptor GetAvatar() => _avatar ? _avatar : null;
+
+        internal static void SetAvatar(VRCAvatarDescriptor avatar) {
+            if (_avatar == avatar) return;
+            _avatar = avatar;
+            RefreshAvatarInfo();
         }
 
-        internal static void RefreshAvatar(System.Func<VRCAvatarDescriptor, bool> favoredAvatar = null) {
-            Helpers.RefreshAvatar(ref _avatar, ref _validAvatars, null, favoredAvatar);
+        /// <summary>
+        /// Keeps the current avatar if it still exists, otherwise picks <paramref name="favoredAvatar"/> or the first one in the scene.
+        /// </summary>
+        internal static void RefreshAvatar(Func<VRCAvatarDescriptor, bool> favoredAvatar = null) {
+            if (!_avatar) {
+                var avatars = Core.GetAvatarsInScene() ?? new List<VRCAvatarDescriptor>();
+                _avatar = (favoredAvatar != null ? avatars.FirstOrDefault(favoredAvatar) : null) ??
+                          avatars.FirstOrDefault();
+            }
+
             RefreshAvatarInfo();
         }
 
         public static void RefreshAvatarInfo() {
             RefreshValidParameters();
             RefreshValidPlayables();
+            AvatarInfoChanged?.Invoke();
         }
 
-        internal static void RefreshValidParameters() {
+        private static void RefreshValidParameters() {
             if (!_avatar) {
                 _validParameters = Array.Empty<AnimatorControllerParameter>();
                 return;
             }
 
-            List<AnimatorControllerParameter> validParams = new List<AnimatorControllerParameter>();
+            var validParams = new List<AnimatorControllerParameter>();
             foreach (var r in _avatar.baseAnimationLayers.Concat(_avatar.specialAnimationLayers)
                          .Select(p => p.animatorController).Concat(_avatar.GetComponentsInChildren<Animator>(true)
                              .Select(a => a.runtimeAnimatorController)).Distinct()) {
                 if (!r) continue;
 
-                AnimatorController c = AssetDatabase.LoadAssetAtPath<AnimatorController>(AssetDatabase.GetAssetPath(r));
+                var c = AssetDatabase.LoadAssetAtPath<AnimatorController>(AssetDatabase.GetAssetPath(r));
                 if (c) validParams.AddRange(c.parameters);
             }
 
-            _validParameters = validParams.Distinct().OrderBy(p => p.name).ToArray();
+            // Several animators often share a parameter, only list each name once.
+            _validParameters = validParams.GroupBy(p => p.name).Select(g => g.First()).OrderBy(p => p.name).ToArray();
         }
 
-        internal static void RefreshValidPlayables() {
+        private static void RefreshValidPlayables() {
             if (!_avatar) {
                 _validPlayables = Array.Empty<string>();
                 _validPlayableIndexes = Array.Empty<int>();
                 return;
             }
 
-            List<(string, int)> myPlayables = new List<(string, int)>();
+            var myPlayables = new List<(string, int)>();
             for (int i = 0; i < AllPlayables.Length; i++) {
                 int index = i == 0 ? i : i + 1;
-                if (_avatar.GetPlayableLayer((VRCAvatarDescriptor.AnimLayerType)index, out AnimatorController c)) {
+                if (_avatar.GetPlayableLayer((VRCAvatarDescriptor.AnimLayerType)index, out _)) {
                     myPlayables.Add((AllPlayables[i], index));
                 }
             }
 
-            _validPlayables = new string[myPlayables.Count];
-            _validPlayableIndexes = new int[myPlayables.Count];
-            for (int i = 0; i < myPlayables.Count; i++) {
-                _validPlayables[i] = myPlayables[i].Item1;
-                _validPlayableIndexes[i] = myPlayables[i].Item2;
-            }
+            _validPlayables = myPlayables.Select(p => p.Item1).ToArray();
+            _validPlayableIndexes = myPlayables.Select(p => p.Item2).ToArray();
         }
 
-        // TODO: Fix avatar list not getting updated when avatars get enabled or disabled in the scene.
-        internal static VRCAvatarDescriptor GetAvatar() => _avatar;
-        internal static ref VRCAvatarDescriptor GetAvatarRef() => ref _avatar;
-        internal static List<VRCAvatarDescriptor> GetValidAvatars() => _validAvatars;
-        internal static ref List<VRCAvatarDescriptor> GetValidAvatarsRef() => ref _validAvatars;
         internal static AnimatorControllerParameter[] GetValidParameters() => _validParameters;
         internal static string[] GetValidPlayables() => _validPlayables;
         internal static int[] GetValidPlayableIndexes() => _validPlayableIndexes;
-        internal static GUIContent GetRedWarnIcon() => _redWarnIcon;
-        internal static GUIContent GetYellowWarnIcon() => _yellowWarnIcon;
     }
 }
