@@ -23,9 +23,3 @@ VRCSDK+ currently provides the following:
     - Toggle Compact Mode through the window's options
     - Warnings to make sure all parameters are valid.
     - Dynamic, Clean and compact UI
-
-### Adds "Quick Setup" Context Menu button to VRC Avatar Descriptor 
-    - Sets View Position based on Eye bones
-    - Triggers "Auto-Detect" for lipsync
-    - Sets Eye bones and sets a few defaults for rotation states
-    - Automatically sets Eyelids type, Mesh and Blink if found
